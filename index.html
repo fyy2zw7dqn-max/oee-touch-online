@@ -1032,10 +1032,14 @@ svg text.team-metric-link:hover{fill:#0066CC;}
   background:#fff; flex:0 0 24px;}
 .dropdown-item.selected .chk{background:var(--blue);}
 .dropdown-done{position:sticky;bottom:0;width:calc(100% - 20px);height:46px;margin:8px 10px 2px;border-radius:9px;background:var(--blue);color:#fff;font-size:17px;font-weight:700;box-shadow:0 -5px 14px rgba(255,255,255,.92);}
-/* 多选筛选面板右上角 × 关闭按钮 */
-.dropdown-x{position:absolute;top:6px;right:8px;width:30px;height:30px;border:none;border-radius:50%;
-  background:#F2F4F7;color:#5A6B7D;font-size:18px;line-height:1;cursor:pointer;z-index:2;padding:0;}
+/* 多选筛选面板右上角 × 关闭按钮
+   R164（用户要求「下拉选择框的 X 按钮调大，便于触摸点击」）：30×30 → 44×44（= 输入框标准高，
+   手指点按面积 900→1936 px²），字号 18→24。面板补 .has-x 时条目右侧留 58px，避免被按钮压住文字。 */
+.dropdown-x{position:absolute;top:4px;right:6px;width:44px;height:44px;border:none;border-radius:50%;
+  background:#F2F4F7;color:#5A6B7D;font-size:24px;line-height:1;cursor:pointer;z-index:2;padding:0;
+  display:flex;align-items:center;justify-content:center;}
 .dropdown-x:hover{background:#E5E8EB;color:var(--red);}
+.dropdown-panel.has-x .dropdown-item{padding-right:58px;}
 /* 原因选择两列面板：左列一级原因 / 右列二级原因，顶部标题；四边距原因维护弹窗各40px，独立弹窗样式 */
 .reason-picker{display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:22px; box-shadow:0 16px 48px rgba(0,0,0,.22); border:2.5px solid rgba(8,114,201,.35);}
 .reason-picker .rp-titlebar{display:flex; align-items:center; gap:10px; padding:8px 16px; background:#fff; border-bottom:1.5px solid rgba(8,114,201,.35); flex-shrink:0;}
@@ -1272,19 +1276,28 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .dg-cell.range{background:var(--blue-light);}
 .dt-time{margin-top:16px; border-top:1px solid var(--border); padding-top:16px;}
 .dt-sum{font-size:20px; font-weight:700; color:var(--blue); text-align:center; margin-bottom:14px;}
-.dt-steppers{display:flex; align-items:center; justify-content:center; gap:20px;}
-.stepper{display:flex; align-items:center; gap:12px;}
-.stepper button{width:58px; height:58px; border-radius:14px; border:1.5px solid var(--border); background:#fff;
-  font-size:30px; font-weight:700; color:var(--t1); cursor:pointer; line-height:1;}
-.stepper button:active{background:var(--bg);}
-/* R157：时/分值框 = 蓝色边框可点输入框（点击直接输入数字，配 ± 步进）。
-   input 需显式高度/盒模型，否则在 flex 行里被按钮撑出基线差。 */
-.stepper .sv{width:64px; height:58px; text-align:center; font-size:30px; font-weight:700;
-  border:1.5px solid var(--blue); border-radius:14px; background:#fff; color:var(--t1);
-  padding:0; outline:none; box-sizing:border-box; font-family:inherit;}
-.stepper .sv:focus{box-shadow:0 0 0 3px rgba(8,114,201,.15);}
-.stepper .u{font-size:18px; color:var(--t2); margin-left:4px;}
-.dt-colon{font-size:30px; font-weight:700; color:var(--t2);}
+/* R164（用户要求「时间选择器时分选择修改上下滑动选择」）：时/分由「−/＋ 步进器 + 数字输入框」
+   改为**上下滑动的滚轮列**（原生滚动 + scroll-snap：手指拖动 / 鼠标滚轮 / 直接点某一格都可选）。
+   行高 44px、可视 3 行 = 132px；上下各垫一个行高的 .dw-sp，使首尾项也能滚到正中
+   ⇒ 「scrollTop = 索引 × 行高」即为中选位置，无需额外补偿。
+   ⚠ 行高在 JS 侧由 panel._wItem 使用，改这里必须同步 _dtBuildWheels 的取值（dt-hm 紧凑态 36px）。 */
+.dt-panel .dt-wheels{display:flex; align-items:center; justify-content:center; gap:12px;}
+.dt-panel .dt-wbox{position:relative; width:76px; height:132px;}
+/* 中选带：画在滚轮下层，指示「停在这一格的值被选中」 */
+.dt-panel .dt-wbox::before{content:''; position:absolute; left:0; right:0; top:44px; height:44px;
+  border-radius:12px; background:var(--blue-light); pointer-events:none;}
+.dt-panel .dt-wheel{position:relative; z-index:1; height:132px; overflow-y:auto; overflow-x:hidden;
+  scroll-snap-type:y mandatory; -webkit-overflow-scrolling:touch; touch-action:pan-y;
+  scrollbar-width:none; -ms-overflow-style:none;
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0,#000 22%,#000 78%,rgba(0,0,0,0) 100%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0,#000 22%,#000 78%,rgba(0,0,0,0) 100%);}
+.dt-panel .dt-wheel::-webkit-scrollbar{width:0; height:0;}
+.dt-panel .dt-wheel .dw-sp{height:44px;}
+.dt-panel .dt-wheel .dw-item{height:44px; line-height:44px; text-align:center; font-size:21px;
+  font-weight:700; color:var(--t2); scroll-snap-align:center; cursor:pointer; opacity:.45;
+  transition:opacity .12s, color .12s, font-size .12s; user-select:none;}
+.dt-panel .dt-wheel .dw-item.on{color:var(--blue); opacity:1; font-size:26px;}
+.dt-panel .dt-wcolon{font-size:22px; font-weight:700; color:var(--t2);}
 .dp-actions{display:flex; gap:12px; margin-top:16px; justify-content:flex-end;}
 /* 含时分选择的时间选择框（.dt-hm）：整体高度压缩至约 80%（相对真实基础 612px → ~488px；dateOnly 模式不受影响）。
    注：基础 .dg-cell 实际渲染 43px、.stepper button 实际 40px（源码 54/58 已被后置规则覆盖），故以真实渲染值为基准 ×0.8。 */
@@ -1297,11 +1310,15 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .dt-panel.dt-hm .dg-cell{height:32px; font-size:15px;}
 .dt-panel.dt-hm .dt-time{margin-top:10px; padding-top:10px;}
 .dt-panel.dt-hm .dt-sum{margin-bottom:9px; font-size:15px;}
-.dt-panel.dt-hm .dt-steppers{gap:16px;}
-.dt-panel.dt-hm .stepper button{height:31px; font-size:22px;}
-.dt-panel.dt-hm .stepper .sv{width:52px; height:34px; font-size:22px; border-radius:10px;}
-.dt-panel.dt-hm .stepper .u{font-size:13px; margin-left:3px;}
-.dt-panel.dt-hm .dt-colon{font-size:22px;}
+/* R164：紧凑态滚轮（行高 / 可视高 / 中选带同步缩到 36 / 108 / 36）—— JS 侧 panel._wItem=36 */
+.dt-panel.dt-hm .dt-wheels{gap:10px;}
+.dt-panel.dt-hm .dt-wbox{width:68px; height:108px;}
+.dt-panel.dt-hm .dt-wbox::before{top:36px; height:36px; border-radius:10px;}
+.dt-panel.dt-hm .dt-wheel{height:108px;}
+.dt-panel.dt-hm .dt-wheel .dw-sp{height:36px;}
+.dt-panel.dt-hm .dt-wheel .dw-item{height:36px; line-height:36px; font-size:18px;}
+.dt-panel.dt-hm .dt-wheel .dw-item.on{font-size:22px;}
+.dt-panel.dt-hm .dt-wcolon{font-size:18px;}
 .dt-panel.dt-hm .dp-actions{margin-top:10px;}
 .dt-panel.dt-hm .dt-close{width:30px; height:30px; font-size:18px;}
 .seg{display:block; background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:5px; gap:5px;}
@@ -4035,8 +4052,9 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
   -webkit-appearance:none;appearance:none;}
 .dropdown-panel .dd-search-input::placeholder{color:#aab2bd;font-size:15px;}
 .dropdown-panel .dd-search-input:focus{border-color:var(--blue);background:#fff;}
-.dropdown-panel .dd-search-clear{width:36px;height:36px;flex:0 0 36px;border:1.5px solid var(--border);
-  border-radius:50%;background:#F4F8FD;color:var(--t2);font-size:19px;line-height:1;padding:0;
+/* R164：清空关键词 × 同样放大到 44×44（手指点按面积 36² → 44²），字号 19→26 */
+.dropdown-panel .dd-search-clear{width:44px;height:44px;flex:0 0 44px;border:1.5px solid var(--border);
+  border-radius:50%;background:#F4F8FD;color:var(--t2);font-size:26px;line-height:1;padding:0;
   display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
 .dropdown-panel .dd-search-clear:hover,.dropdown-panel .dd-search-clear:active{
   background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
@@ -4971,6 +4989,8 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
   /* 整面板重建（首次渲染 / 多选勾选后刷新）。搜索输入只走下面的 paintList，
      绝不整面板重建——否则每敲一个字输入框都会丢焦点、光标跳到开头。 */
   const renderItems=()=>{
+    /* R164：多选面板带右上角 × ⇒ 打上 .has-x，条目右侧让出 58px，放大的按钮不会压住文字 */
+    panel.classList.toggle('has-x', !!multi);
     panel.innerHTML=(multi?'<button class="dropdown-x" title="关闭" onclick="void(0)">×</button>':'')
       +(searchCfg?('<div class="dropdown-search"><input class="dd-search-input" type="text" autocomplete="off" placeholder="'+searchCfg.ph+'"><button class="dd-search-clear" type="button" title="清空关键词">×</button></div>'):'')
       +(searchCfg?('<div class="dropdown-list">'+itemsHtml()+'</div>'):itemsHtml())
@@ -5150,10 +5170,10 @@ function refreshDTPanel(panel){
     ?`<div class="dt-time"><div class="dt-sum">${valueText}</div></div>`
     :`<div class="dt-time">
        <div class="dt-sum">${valueText}</div>
-       <div class="dt-steppers">
-         <div class="stepper"><button onclick="_dtStep('hh',-1,this)">−</button><input class="sv" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="${pad2(v.hh)}" data-tf="hh"><button onclick="_dtStep('hh',1,this)">+</button><span class="u">时</span></div>
-         <div class="dt-colon">:</div>
-         <div class="stepper"><button onclick="_dtStep('mm',-1,this)">−</button><input class="sv" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="${pad2(v.mm)}" data-tf="mm"><button onclick="_dtStep('mm',1,this)">+</button><span class="u">分</span></div>
+       <div class="dt-wheels">
+         <div class="dt-wbox"><div class="dt-wheel" data-tf="hh"></div></div>
+         <div class="dt-wcolon">:</div>
+         <div class="dt-wbox"><div class="dt-wheel" data-tf="mm"></div></div>
        </div>
      </div>`;
   const rangeHint=(panel._min||panel._max)
@@ -5170,40 +5190,93 @@ function refreshDTPanel(panel){
        <button class="btn btn-primary btn-sm" onclick="_dtApply(this)">确定</button></div>`;
   /* 内容刷新后重新校正位置，确保始终落在可操作区域内 */
   positionDTPanel(panel);
-  /* R157：时/分蓝框支持点击直接输入数字。刻意不整面板重渲染（每敲一字重建会丢焦点、
-     光标跳回首字符），输入落地只写 panel._val 并同步 .dt-sum 文本；
-     失焦时归一化补零，并按可选范围校验（与 _dtStep 越界口径一致）。 */
-  panel.querySelectorAll('.stepper .sv').forEach(function(inp){
-    inp.addEventListener('focus',function(){ try{this.select();}catch(e){} });
-    inp.addEventListener('input',function(){
-      const d=this.value.replace(/\D/g,'').slice(0,2);
-      if(d!==this.value)this.value=d;
-      if(d.length!==2)return;
-      const n=parseInt(d,10), max=this.dataset.tf==='hh'?23:59;
-      if(n<=max)_dtTypeApply(panel,this);   /* 合法立即落地；超上限留给失焦按越界口径处理 */
+  /* R164：时/分改为上下滑动滚轮列（替代 R157 的数字输入框 + ± 步进器）。
+     每次重渲染（切日期 / 换月份）都要按 panel._val 重新定位滚轮。 */
+  if(!panel._dateOnly) _dtBuildWheels(panel);
+}
+/* ============ R164 · 时间选择器「时/分」上下滑动选择（滚轮列） ============
+   结构：.dt-wheel（原生 overflow-y 滚动容器 + scroll-snap）> .dw-sp + N×.dw-item + .dw-sp
+   映射：scrollTop = 索引 × 行高 ⇒ 中选位置；行高 = panel._wItem（dt-hm 紧凑态 36，基础 44）
+   交互：拖动滑动 / 鼠标滚轮 = 原生滚动；松手后 130ms 吸附并落库；点某一格 = 平滑滚过去并落库
+   校验：落点超出 panel._min/_max ⇒ 弹回原值 + toast（与 _dtApply 的口径一致） */
+function _dtBuildWheels(panel){
+  panel.querySelectorAll('.dt-wheel').forEach(function(w){
+    const field=w.dataset.tf, n=(field==='hh'?24:60);
+    const cur=(field==='hh'?panel._val.hh:panel._val.mm);
+    let html='<div class="dw-sp"></div>';
+    for(let i=0;i<n;i++) html+='<div class="dw-item'+(i===cur?' on':'')+'" data-v="'+i+'">'+pad2(i)+'</div>';
+    html+='<div class="dw-sp"></div>';
+    w.innerHTML=html;
+    /* 行高以**实际渲染**为准（dt-hm 紧凑态 36 / 基础 44），别在 JS 再写一份常量对不上；
+       首帧面板是 visibility:hidden（可见性不影响 layout）⇒ 用 computed height 取值。 */
+    const sp=w.firstElementChild;
+    const ih=parseFloat(getComputedStyle(sp).height)||sp.offsetHeight||44;
+    w._field=field; w._n=n; w._item=ih;
+    w.scrollTop=cur*ih;                          /* 初始定位（无动画，避免打开时滚动） */
+    w.addEventListener('scroll',function(){
+      const c=Math.round(this.scrollTop/this._item);
+      _dtWheelLive(panel,this,c);
+      clearTimeout(this._settle);
+      this._settle=setTimeout(function(){ _dtWheelSettle(panel,w,c); },130);
+    },{passive:true});
+    w.addEventListener('click',function(e){
+      const it=(e.target&&e.target.closest)?e.target.closest('.dw-item'):null;
+      if(!it)return;
+      const i=+it.dataset.v;
+      _dtWheelCommit(panel,w,i);
+      if(Math.abs(w.scrollTop-i*w._item)>1){
+        try{ w.scrollTo({top:i*w._item,behavior:'smooth'}); }catch(err){ w.scrollTop=i*w._item; }
+      }
     });
-    inp.addEventListener('blur',function(){ _dtTypeApply(panel,this,true); });
-    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); this.blur(); } });
   });
 }
-/* R157：时/分输入落地。写回 panel._val 并同步汇总文本；越界回退并提示。 */
-function _dtTypeApply(panel,inp,isBlur){
-  const field=inp.dataset.tf; if(!field)return;
-  const v=panel._val;
-  const raw=String(inp.value==null?'':inp.value).replace(/\D/g,'');
-  const max=field==='hh'?23:59;
-  let n=parseInt(raw,10);
-  if(isNaN(n))n=field==='hh'?v.hh:v.mm;     /* 失焦且为空/非数字：保持原值 */
-  if(n>max)n=max; if(n<0)n=0;
-  const before={y:v.y,m:v.m,d:v.d,hh:v.hh,mm:v.mm};
-  if(field==='hh')v.hh=n; else v.mm=n;
+/* 滚动过程中：更新高亮 + 汇总文本（落库只在合法时发生，越界保留原值等松手再回弹） */
+function _dtWheelLive(panel,w,c){
+  const idx=Math.max(0,Math.min(w._n-1,c));
+  _dtWheelPaintOn(w,idx);
+  const v=panel._val, field=w._field;
+  const before=(field==='hh'?v.hh:v.mm);
+  if(field==='hh')v.hh=idx; else v.mm=idx;
+  if(!_dtInRange(panel,v)){ if(field==='hh')v.hh=before; else v.mm=before; return; }
+  _dtPaintSum(panel);
+}
+/* 松手后吸附并落库（越界弹出 + 提示） */
+function _dtWheelSettle(panel,w,c){
+  const idx=Math.max(0,Math.min(w._n-1,c));
+  const v=panel._val, field=w._field;
+  const before=(field==='hh'?v.hh:v.mm);
+  if(field==='hh')v.hh=idx; else v.mm=idx;
   if(!_dtInRange(panel,v)){
-    Object.assign(v,before);
+    if(field==='hh')v.hh=before; else v.mm=before;
+    _dtPaintSum(panel); _dtWheelPaintOn(w,before);
+    if(Math.abs(w.scrollTop-before*w._item)>1) w.scrollTop=before*w._item;   /* 弹回合法值 */
     toast('已超出可选时间范围');
+    return;
   }
-  const sum=panel.querySelector('.dt-sum');
-  if(sum)sum.textContent=panel._dateOnly?(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d)):(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d)+' '+pad2(v.hh)+':'+pad2(v.mm));
-  inp.value=pad2(field==='hh'?v.hh:v.mm);
+  if(Math.abs(w.scrollTop-idx*w._item)>1) w.scrollTop=idx*w._item;           /* 吸附对齐 */
+  _dtPaintSum(panel); _dtWheelPaintOn(w,idx);
+}
+/* 点选某一格：直接落库（已在正中时不会触发滚动事件，故与滚动解耦） */
+function _dtWheelCommit(panel,w,idx){
+  const v=panel._val, field=w._field;
+  const before=(field==='hh'?v.hh:v.mm);
+  if(field==='hh')v.hh=idx; else v.mm=idx;
+  if(!_dtInRange(panel,v)){
+    if(field==='hh')v.hh=before; else v.mm=before;
+    _dtWheelPaintOn(w,before); toast('已超出可选时间范围'); return;
+  }
+  _dtWheelPaintOn(w,idx); _dtPaintSum(panel);
+}
+function _dtWheelPaintOn(w,idx){
+  const items=w.querySelectorAll('.dw-item');
+  for(let i=0;i<items.length;i++) items[i].classList.toggle('on', i===idx);
+}
+/* 汇总文本（.dt-sum）与 panel._val 同步；dateOnly 面板没有时分 */
+function _dtPaintSum(panel){
+  const v=panel._val, sum=panel.querySelector('.dt-sum');
+  if(!sum)return;
+  sum.textContent=panel._dateOnly?(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d))
+    :(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d)+' '+pad2(v.hh)+':'+pad2(v.mm));
 }
 /* 可选范围辅助：数值化时间 / 文本化时间 / 是否在范围内 */
 function _dtDate(p){return new Date(p.y,p.m,p.d,p.hh||0,p.mm||0);}
@@ -5224,18 +5297,6 @@ function _dtMove(delta,btn){
   refreshDTPanel(panel);
 }
 function _dtPick(d,btn){const panel=btn.closest('.dt-panel'); panel._val.d=d; refreshDTPanel(panel);}
-function _dtStep(field,delta,btn){
-  const panel=btn.closest('.dt-panel'); const v=panel._val;
-  const before={y:v.y,m:v.m,d:v.d,hh:v.hh,mm:v.mm};
-  if(field==='hh'){v.hh=(v.hh+delta+24)%24;} else {v.mm=(v.mm+delta+60)%60;}
-  /* 越界回退并提示（保持所选时间始终落在可选范围内） */
-  if(!_dtInRange(panel,v)){
-    Object.assign(v,before);
-    toast('已超出可选时间范围');
-    return;
-  }
-  refreshDTPanel(panel);
-}
 function _dtApply(btn){
   const panel=btn.closest('.dt-panel'); const v=panel._val; const anchor=panel._anchor;
   /* 越界拦截：不关闭面板，提示可选范围 */
