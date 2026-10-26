@@ -4060,6 +4060,22 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
   background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
 .dropdown-panel .dropdown-empty{padding:30px 20px;text-align:center;font-size:16px;color:var(--t2);}
 .dropdown-panel .dropdown-list{display:block;}
+/* ============ R166 · 所有页面的时间筛选框：宽度收缩到「刚好显示完整」 ============
+   用户原话：「所有页面的时间筛选框的宽度修改为刚好显示完整即可」。
+   病根：各处按固定宽写死（待确认 360/380、已确认原因 215、异常核对 280、运行参数 330、趋势/班组 178），
+   而实际内容只有 100~245px ⇒ 右侧留大片空白，看上去像没对齐。
+   ✅ 统一 width:auto + flex:0 0 auto ⇒ 框宽 = 内容宽（.f-input 自带 padding:0 16px + .arrow margin-left:8px）；
+      文字仍 nowrap，超长时 .dv 自己横向滚动（另有 bindFilterTextScroll 跑马灯兜底）。
+   ☠ 别再给这些框写回固定宽度：宽度一旦大于内容，并排时会白占空间、把右侧「重置/补录/视频讲解」挤出可视区。 */
+.pending-filter-card .history-range-only,
+.pending-single-filter-card .history-range-only,
+.history-filter>div:nth-child(4),
+.order-filter-row .order-range,
+.process-range,
+.trend-filter-row .trend-range,
+.trend-filter-row .trend-range.month-range,
+.team-filter-row .team-range,
+.team-filter-row .team-range.month-range{width:auto!important;flex:0 0 auto!important;min-width:0!important;}
 </style>
 <style id="__dm_no_drag_style__">* { -webkit-user-drag: none !important; }</style><style id="__dm_bindable_badge_style__">[data-sp-bindable="database"]{outline:1px dashed #0088ff;outline-offset:2px;border-radius:4px;}[data-sp-bindable="database"] *{pointer-events:none !important;transition:none !important;animation:none !important;}[data-sp-bindable="database"]{transition:none !important;animation:none !important;}
 </style></head>
@@ -10417,24 +10433,23 @@ function openReasonPicker(i){
   const centerReasonPanel=function(){
     const h=panel.offsetHeight;
     let top=Math.max(16, Math.floor((appRect.height-h)/2));
-    /* ============ R159 · 居中位置不得压住「第 N 段（末段）」等文字 ============
-       用户原话：「原因选择弹窗位置下移一点，不能遮挡第 1 段（末段）等文字（刚好不遮住即可）」。
+    /* ============ R159 + R166 · 居中位置不得压住「第 N 段（末段）」等文字 ============
+       R159 用户原话：「原因选择弹窗位置下移一点，不能遮挡第 1 段（末段）等文字（刚好不遮住即可）」。
        病根：面板按 app **上下居中**，而来源弹窗 `.pop.reason-pop` 是 `top:96/bottom:0` 的铺满式，
-       它的分段行恰好长在居中跨度**偏上**的位置 —— 实测 picker y283~741 vs「第 1 段（末段）」y285~309，
-       整行 24px 被盖死；行在跨度里偏上 ⇒ 把面板整体**下移**就能露出来。
-       ✅ 做法：与任一分段行（`.seg-row1`）相交就下移到该行下方 8px；多段时迭代下移直至全部不相交；
-         最后夹在 app 可视区内（上下各留 16px）。☠ 别改成「固定下移 N px」—— 分段行数 / 折叠态会变，
-         只有按实测几何让位才是「刚好不遮住」。☠ 位置只在首帧算一次（R116 起 `_sized` 锁定，防面板跳动），
-         所以这里算完即终值。 */
+       它的分段行恰好长在居中跨度**偏上**的位置 —— 实测 picker y283~741 vs「第 1 段（末段）」y285~309。
+       ✅ 做法：与任一分段行（`.seg-row1`）相交 ⇒ 顶边落到「**最后一条**分段行底边 **− 4**」；
+         多段时同样只落一次（贴末段下方，不会盖住前面已确认的段）。
+       R166 用户看图后的追加要求：「弹窗顶边再上移 12px，与附图一致」⇒ 偏移由 `+8` 改成 `−4`
+         （实测待确认页：分段行底 309 ⇒ 顶边 317 → **305**，刚好压住分段卡下沿 6px、不压文字）。
+       ☠ 别改回「固定下移 N px」—— 分段行数 / 折叠态会变，只有按实测几何让位才是「刚好不遮住」。
+       ☠ 位置只在首帧算一次（R116 起 `_sized` 锁定，防面板跳动），所以这里算完即终值。
+       ☠ 因为 −4 是**故意**让顶边略高于分段行底边，检测循环不能再拿「top<rr.bottom 就算相交」反复下推
+         （否则自己把自己往下顶、12 次 guard 全部命中）⇒ 只判一次相交、直接落值。 */
     const segRows=reasonPop?Array.from(reasonPop.querySelectorAll('.seg-row1')):[];
-    for(let guard=0;guard<12&&segRows.length;guard++){
-      let hitBottom=null;
-      for(let i=0;i<segRows.length;i++){
-        const rr=toAppRect(segRows[i],_m);
-        if(top<rr.bottom&&top+h>rr.top){ hitBottom=rr.bottom; break; }
-      }
-      if(hitBottom==null) break;
-      top=hitBottom+8;
+    if(segRows.length){
+      const rects=segRows.map(function(el){ return toAppRect(el,_m); });
+      const hit=rects.some(function(rr){ return top<rr.bottom&&top+h>rr.top; });
+      if(hit) top=Math.max.apply(null,rects.map(function(rr){ return rr.bottom; }))-4;
     }
     top=Math.min(top,Math.max(16,appRect.height-h-16));
     panel.style.top=Math.floor(top)+'px';
