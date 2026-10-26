@@ -10299,7 +10299,28 @@ function openReasonPicker(i){
   /* 量当前内容高度 → 上下居中（留 16px 最小边距） */
   const centerReasonPanel=function(){
     const h=panel.offsetHeight;
-    panel.style.top=Math.max(16, Math.floor((appRect.height-h)/2))+'px';
+    let top=Math.max(16, Math.floor((appRect.height-h)/2));
+    /* ============ R159 · 居中位置不得压住「第 N 段（末段）」等文字 ============
+       用户原话：「原因选择弹窗位置下移一点，不能遮挡第 1 段（末段）等文字（刚好不遮住即可）」。
+       病根：面板按 app **上下居中**，而来源弹窗 `.pop.reason-pop` 是 `top:96/bottom:0` 的铺满式，
+       它的分段行恰好长在居中跨度**偏上**的位置 —— 实测 picker y283~741 vs「第 1 段（末段）」y285~309，
+       整行 24px 被盖死；行在跨度里偏上 ⇒ 把面板整体**下移**就能露出来。
+       ✅ 做法：与任一分段行（`.seg-row1`）相交就下移到该行下方 8px；多段时迭代下移直至全部不相交；
+         最后夹在 app 可视区内（上下各留 16px）。☠ 别改成「固定下移 N px」—— 分段行数 / 折叠态会变，
+         只有按实测几何让位才是「刚好不遮住」。☠ 位置只在首帧算一次（R116 起 `_sized` 锁定，防面板跳动），
+         所以这里算完即终值。 */
+    const segRows=reasonPop?Array.from(reasonPop.querySelectorAll('.seg-row1')):[];
+    for(let guard=0;guard<12&&segRows.length;guard++){
+      let hitBottom=null;
+      for(let i=0;i<segRows.length;i++){
+        const rr=toAppRect(segRows[i],_m);
+        if(top<rr.bottom&&top+h>rr.top){ hitBottom=rr.bottom; break; }
+      }
+      if(hitBottom==null) break;
+      top=hitBottom+8;
+    }
+    top=Math.min(top,Math.max(16,appRect.height-h-16));
+    panel.style.top=Math.floor(top)+'px';
   };
   _activeDropdown=panel;
   panel._openStamp=_ddEventStamp; /* 同上：避免被创建它的那一次点击立刻关闭 */
