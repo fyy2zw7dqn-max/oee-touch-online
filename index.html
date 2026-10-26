@@ -1087,7 +1087,10 @@ svg text.team-metric-link:hover{fill:#0066CC;}
      · 点其余空白处 → 在标题栏解释区预览该原因的业务解释
    ⚠ 原 `white-space:nowrap/overflow:hidden/text-overflow:ellipsis` 是给整行文字用的，
      改成 flex 后这两件必须挪到 .rp-txt 上，否则省略号会落到 flex 容器上（不生效）。 */
-.reason-picker .rp-item{display:flex; align-items:center; gap:10px; white-space:normal; overflow:visible;}
+/* R158（用户要求：勾选框与右侧文字的间距 = 1 个汉字的宽度）：
+   R136 起勾选框在文字左侧，间距由本行 flex gap 决定。条目字号 21px，汉字为全角
+   ⇒ 1 个汉字宽 = 21px，故 gap 10px → 21px（一级 / 二级 / 品种选择面板共用本规则）。 */
+.reason-picker .rp-item{display:flex; align-items:center; gap:21px; white-space:normal; overflow:visible;}
 .reason-picker .rp-item .rp-txt{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .reason-picker .rp-check{flex:0 0 30px; width:30px; height:30px; padding:0; box-sizing:border-box;
   border:1.5px solid var(--border); border-radius:9px; background:#fff; color:transparent;
@@ -1259,7 +1262,12 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .stepper button{width:58px; height:58px; border-radius:14px; border:1.5px solid var(--border); background:#fff;
   font-size:30px; font-weight:700; color:var(--t1); cursor:pointer; line-height:1;}
 .stepper button:active{background:var(--bg);}
-.stepper .sv{width:64px; text-align:center; font-size:30px; font-weight:700;}
+/* R157：时/分值框 = 蓝色边框可点输入框（点击直接输入数字，配 ± 步进）。
+   input 需显式高度/盒模型，否则在 flex 行里被按钮撑出基线差。 */
+.stepper .sv{width:64px; height:58px; text-align:center; font-size:30px; font-weight:700;
+  border:1.5px solid var(--blue); border-radius:14px; background:#fff; color:var(--t1);
+  padding:0; outline:none; box-sizing:border-box; font-family:inherit;}
+.stepper .sv:focus{box-shadow:0 0 0 3px rgba(8,114,201,.15);}
 .stepper .u{font-size:18px; color:var(--t2); margin-left:4px;}
 .dt-colon{font-size:30px; font-weight:700; color:var(--t2);}
 .dp-actions{display:flex; gap:12px; margin-top:16px; justify-content:flex-end;}
@@ -1276,7 +1284,7 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .dt-panel.dt-hm .dt-sum{margin-bottom:9px; font-size:15px;}
 .dt-panel.dt-hm .dt-steppers{gap:16px;}
 .dt-panel.dt-hm .stepper button{height:31px; font-size:22px;}
-.dt-panel.dt-hm .stepper .sv{width:50px; font-size:22px;}
+.dt-panel.dt-hm .stepper .sv{width:52px; height:34px; font-size:22px; border-radius:10px;}
 .dt-panel.dt-hm .stepper .u{font-size:13px; margin-left:3px;}
 .dt-panel.dt-hm .dt-colon{font-size:22px;}
 .dt-panel.dt-hm .dp-actions{margin-top:10px;}
@@ -4463,8 +4471,19 @@ function materialDropdownOptions(){return [{v:'__ALL__',t:'运营料型'},{v:'�
 function reasonDropdownOptions(){return [{v:'__ALL__',t:'全部原因'},{v:'设备故障',t:'设备故障'},{v:'无生产计划',t:'无生产计划'},{v:'换品种',t:'换品种'},{v:'换模具',t:'换模具'}];}
 function multiFilterText(values,allText){return !values||!values.length?allText:values.join('、');}
 function openPageMultiFilter(anchor,options,values,onApply){
-  anchor._sel=(values||[]).slice();delete anchor._pendingSel;
-  openDropdown(anchor,options,true,v=>{anchor._pendingSel=v;},()=>{
+  /* R157：多选筛选「点面板外即保存」⇒ 点另一个筛选触发器时，旧面板先在**这里**按「完成」
+     保存并关闭（其回调会整页重渲染、锚点被替换 ⇒ _ddRelocate 找回新节点）。
+     必须赶在下面求值 options/values **之前**关：这两个参数都可能是依赖筛选状态的快照
+     （机器选项要按工段收敛；当前选中值可能被工段保存时的越界过滤改掉），
+     在点击瞬间求值会拿到保存前的旧状态 —— 故二者同时支持传函数惰性求值。 */
+  if(_activeDropdown&&_activeDropdown._requireDone){
+    closeDropdown(true);
+    anchor=_ddRelocate(anchor);
+  }
+  const opts=typeof options==='function'?options():options;
+  const vals=(typeof values==='function'?values():values)||[];
+  anchor._sel=vals.slice();delete anchor._pendingSel;
+  openDropdown(anchor,opts,true,v=>{anchor._pendingSel=v;},()=>{
     const finalValues=(anchor._pendingSel||anchor._sel||[]).slice(),dv=anchor.querySelector('.dv');
     if(dv)dv.textContent=multiFilterText(finalValues,anchor.dataset.allText||'全部');
     anchor.classList.toggle('has-value',finalValues.length>0);
@@ -4765,7 +4784,7 @@ function resetNavToFirstTab(key){
 }
 /* 注意：排除 .nav-action（侧栏底部的全屏按钮），它不是页面导航项，点击不应切换页面 */
 document.querySelectorAll('.nav-item:not(.nav-action)').forEach(el=>{
-  el.onclick=()=>{if(_activeDropdown&&_activeDropdown._requireDone){toast('请先点击“完成”应用多选条件');return;}document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  el.onclick=()=>{if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
     el.classList.add('active'); const navKey=el.dataset.page; resetNavToFirstTab(navKey); curNav=navKey; goPage(navKey);};
 });
 function setSidebarCollapsed(collapsed){
@@ -4829,8 +4848,34 @@ function ddMatchText(hay,query){
 }
 /* searchCfg（可选，第 6 个参数）：{ph:'搜索框占位文案', empty:'无匹配时的占位文案', value:'初始关键词'}
    只有传了它的下拉才带搜索框——其余几十处 openDropdown 调用行为完全不变。 */
+/* R157：多选筛选框「点面板外即保存并关闭」后，打开新下拉时旧多选面板不能再拒绝关闭。
+   先按「完成」保存它；保存回调（pickPageFilter→goPage）会整页重渲染，
+   可能把「正准备打开新下拉」的锚点替换掉 —— 按
+   ① id → ② 行内 onclick 原文 → ③ 类名+文本签名 的顺序找回新节点再继续，
+   否则新面板会按已脱离文档的旧锚点（零矩形）定位到左上角。 */
+function _ddRelocate(anchor){
+  if(!anchor||anchor.isConnected!==false)return anchor;
+  const app=document.getElementById('app'); if(!app)return anchor;
+  if(anchor.id){
+    const byId=app.querySelector('#'+anchor.id);
+    if(byId)return byId;
+  }
+  const oc=anchor.getAttribute&&anchor.getAttribute('onclick');
+  if(oc){
+    const fresh=app.querySelector('[onclick="'+oc.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]');
+    if(fresh)return fresh;
+  }
+  const sig=(anchor.className||'')+'|'+String(anchor.textContent||'').replace(/\s+/g,' ').trim();
+  const cand=Array.prototype.slice.call(app.querySelectorAll(anchor.tagName.toLowerCase())).filter(function(e){
+    return (e.className||'')+'|'+String(e.textContent||'').replace(/\s+/g,' ').trim()===sig;
+  });
+  return cand[0]||anchor;
+}
 function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
-  if(_activeDropdown&&!closeDropdown()){
+  if(_activeDropdown&&_activeDropdown._requireDone){
+    closeDropdown(true);
+    anchorEl=_ddRelocate(anchorEl);
+  }else if(_activeDropdown&&!closeDropdown()){
     toast('请先点击"完成"应用当前多选条件');
     return;
   }
@@ -4858,6 +4903,13 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
      否则「业务场景」筛选下拉看不见也点不到（R68 修复）。 */
   if(anchorEl.closest('#msgOverlay')) panel.style.zIndex='300';
   document.getElementById('app').appendChild(panel);
+  /* R157：面板内部点击在此截留，不冒泡到文档级「点面板外关闭」逻辑。
+     必要性：多选勾选后 renderItems() 会整面板重建，click 事件里的 e.target 是
+     **已脱离文档的旧选项节点**，文档级 contains() 对它返回 false —— 不截留的话
+     每次勾选都会被误判成「点面板外」而保存关闭，多选就此废掉。
+     冒泡阶段监听（晚于选项自身回调）⇒ 不影响选项逻辑；与原因/品种选择面板
+     （.rp-modal / .var-picker，见 openReasonPicker / openVarietyPickerModal）做法一致。 */
+  panel.addEventListener('click', function(e){ e.stopPropagation(); });
   _activeDropdown=panel;
   panel._openStamp=_ddEventStamp; /* 标记：本面板由哪一次 click 事件创建（用于抑制「自己关自己」） */
   panel._anchor=anchorEl;         /* 记录触发元素，供按钮式触发器实现「再次点击收起」 */
@@ -4989,7 +5041,12 @@ document.addEventListener('click', e=>{
   if(_activeDropdown._openStamp===e.timeStamp) return;
   /* ② 点击落在面板内部：交给面板自身的点击逻辑处理 */
   if(_activeDropdown.contains(e.target)) return;
-  /* ③ 点击落在其它筛选类触发器上：不关闭，交由该触发器自己切换（多选未「完成」时 closeDropdown 会拒绝） */
+  /* ③ R157：多选筛选框（_requireDone）—— 点击面板外任何区域（含其它筛选触发器、
+     弹窗字段、导航、表格行、空白处）一律等同「完成」：保存当前已选条件并关闭。
+     旧行为：这里靠 .f-input/.seg-pick/.pl-set 白名单放行 + closeDropdown 拒绝关闭，
+     表现为「必须点完成才能继续」；按需求改为「点其他区域自动退出并保存已选条件」。 */
+  if(_activeDropdown._requireDone){ closeDropdown(true); return; }
+  /* ④ 单选等其余下拉保持原行为：点到别的筛选触发器上不关，交给它自己切换 */
   if(e.target.closest('.f-input,.seg-pick,.pl-set')) return;
   closeDropdown();
 });
@@ -5071,9 +5128,9 @@ function refreshDTPanel(panel){
     :`<div class="dt-time">
        <div class="dt-sum">${valueText}</div>
        <div class="dt-steppers">
-         <div class="stepper"><button onclick="_dtStep('hh',-1,this)">−</button><div class="sv">${pad2(v.hh)}</div><button onclick="_dtStep('hh',1,this)">+</button><span class="u">时</span></div>
+         <div class="stepper"><button onclick="_dtStep('hh',-1,this)">−</button><input class="sv" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="${pad2(v.hh)}" data-tf="hh"><button onclick="_dtStep('hh',1,this)">+</button><span class="u">时</span></div>
          <div class="dt-colon">:</div>
-         <div class="stepper"><button onclick="_dtStep('mm',-1,this)">−</button><div class="sv">${pad2(v.mm)}</div><button onclick="_dtStep('mm',1,this)">+</button><span class="u">分</span></div>
+         <div class="stepper"><button onclick="_dtStep('mm',-1,this)">−</button><input class="sv" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="${pad2(v.mm)}" data-tf="mm"><button onclick="_dtStep('mm',1,this)">+</button><span class="u">分</span></div>
        </div>
      </div>`;
   const rangeHint=(panel._min||panel._max)
@@ -5090,6 +5147,40 @@ function refreshDTPanel(panel){
        <button class="btn btn-primary btn-sm" onclick="_dtApply(this)">确定</button></div>`;
   /* 内容刷新后重新校正位置，确保始终落在可操作区域内 */
   positionDTPanel(panel);
+  /* R157：时/分蓝框支持点击直接输入数字。刻意不整面板重渲染（每敲一字重建会丢焦点、
+     光标跳回首字符），输入落地只写 panel._val 并同步 .dt-sum 文本；
+     失焦时归一化补零，并按可选范围校验（与 _dtStep 越界口径一致）。 */
+  panel.querySelectorAll('.stepper .sv').forEach(function(inp){
+    inp.addEventListener('focus',function(){ try{this.select();}catch(e){} });
+    inp.addEventListener('input',function(){
+      const d=this.value.replace(/\D/g,'').slice(0,2);
+      if(d!==this.value)this.value=d;
+      if(d.length!==2)return;
+      const n=parseInt(d,10), max=this.dataset.tf==='hh'?23:59;
+      if(n<=max)_dtTypeApply(panel,this);   /* 合法立即落地；超上限留给失焦按越界口径处理 */
+    });
+    inp.addEventListener('blur',function(){ _dtTypeApply(panel,this,true); });
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); this.blur(); } });
+  });
+}
+/* R157：时/分输入落地。写回 panel._val 并同步汇总文本；越界回退并提示。 */
+function _dtTypeApply(panel,inp,isBlur){
+  const field=inp.dataset.tf; if(!field)return;
+  const v=panel._val;
+  const raw=String(inp.value==null?'':inp.value).replace(/\D/g,'');
+  const max=field==='hh'?23:59;
+  let n=parseInt(raw,10);
+  if(isNaN(n))n=field==='hh'?v.hh:v.mm;     /* 失焦且为空/非数字：保持原值 */
+  if(n>max)n=max; if(n<0)n=0;
+  const before={y:v.y,m:v.m,d:v.d,hh:v.hh,mm:v.mm};
+  if(field==='hh')v.hh=n; else v.mm=n;
+  if(!_dtInRange(panel,v)){
+    Object.assign(v,before);
+    toast('已超出可选时间范围');
+  }
+  const sum=panel.querySelector('.dt-sum');
+  if(sum)sum.textContent=panel._dateOnly?(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d)):(v.y+'-'+pad2(v.m+1)+'-'+pad2(v.d)+' '+pad2(v.hh)+':'+pad2(v.mm));
+  inp.value=pad2(field==='hh'?v.hh:v.mm);
 }
 /* 可选范围辅助：数值化时间 / 文本化时间 / 是否在范围内 */
 function _dtDate(p){return new Date(p.y,p.m,p.d,p.hh||0,p.mm||0);}
@@ -7475,7 +7566,7 @@ function teamRenderBody(){
       <div class="f-input team-range ${dayMode?'':'month-range'}" onclick="openTeamRangePicker()" title="点击选择时间范围"><span class="dv">${teamTimeText()}</span></div>
       <div class="f-input multi-filter team-team-filter ${tf.teams.length?'has-value':''}" data-all-text="全部班组" onclick="openPageMultiFilter(this,teamTeamOptionList(),pageFilters.team.teams,pickPageFilter('team','teams'))" title="点击多选班组"><span class="dv">${multiFilterText(tf.teams,'全部班组')}</span><span class="arrow">▾</span></div>
       <div class="f-input multi-filter team-section ${tf.sections.length?'has-value':''}" data-all-text="全部工段" onclick="openPageMultiFilter(this,sectionFilterOptions(),pageFilters.team.sections,pickSectionFilter('team'))" title="点击多选工段"><span class="dv">${multiFilterText(tf.sections,'全部工段')}</span><span class="arrow">▾</span></div>
-      <div class="f-input multi-filter team-machine ${tf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,sectionMachineDropdownOptions(pageFilters.team.sections),pageFilters.team.machines,pickPageFilter('team','machines'))"><span class="dv">${machineText}</span><span class="arrow">▾</span></div>
+      <div class="f-input multi-filter team-machine ${tf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,()=>sectionMachineDropdownOptions(pageFilters.team.sections),()=>pageFilters.team.machines,pickPageFilter('team','machines'))"><span class="dv">${machineText}</span><span class="arrow">▾</span></div>
       <div class="f-input multi-filter team-product ${tf.products.length?'has-value':''}" data-all-text="全部品种" onclick="openPageMultiFilter(this,teamProductOptions(),pageFilters.team.products,pickPageFilter('team','products'))"><span class="dv">${productText}</span><span class="arrow">▾</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       <button class="icon-btn team-refresh-btn" onclick="render('team');toast('已刷新')" title="刷新">↻</button>
@@ -9009,7 +9100,8 @@ function syncTopRecordCounts(){
   box.style.display=pending||abnormal?'flex':'none';
 }
 function goPage(p){
-  if(_activeDropdown&&_activeDropdown._requireDone){toast('请先点击“完成”应用当前多选条件');return;}
+  /* R157：多选筛选框改为「点面板外即保存并关闭」—— 这里先保存并关闭旧条件，再继续本动作 */
+  if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);
   /* 切换页面时关闭页面相关浮层控件（时间选择器等），避免控件残留在新页面上 */
   closeDTPanel();
   syncOrderNavigation();
@@ -9138,7 +9230,8 @@ function bfDurLimit(i){
   return {start:start, max:max, total:total, maxMin:Math.max(0,total-1)};
 }
 function openBackfill(){
-  if(_activeDropdown&&_activeDropdown._requireDone){toast('请先点击“完成”应用当前多选条件');return;}
+  /* R157：多选筛选框改为「点面板外即保存并关闭」—— 这里先保存并关闭旧条件，再继续本动作 */
+  if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);
   if(!bfState){
     const gap=IOT_COLLECT_GAPS[0];
     /* 默认只有 1 行：整段采集中断作为一个时间段（开始=中断开始，结束=中断结束自动带出），无需设置时间 */
@@ -10171,7 +10264,7 @@ function openReasonPicker(i){
   /* 已选一级原因 → 直接进入二级阶段；否则从一级原因开始 */
   const _s0=window._segs&&window._segs[i];
   if(_s0) _s0.rpStage=_s0.lv1?'lv2':'lv1';
-  if(_activeDropdown&&!closeDropdown()){
+  if(_activeDropdown&&!closeDropdown(!!_activeDropdown._requireDone)){
     toast('请先点击"完成"应用当前多选条件');
     return;
   }
@@ -10396,7 +10489,7 @@ function closeReasonPicker(){
 }
 /* ---- 换品种：弹窗选择成品订单 ---- */
 function openVarietyPickerModal(i){
-  if(_activeDropdown&&!closeDropdown()){
+  if(_activeDropdown&&!closeDropdown(!!_activeDropdown._requireDone)){
     toast('请先点击"完成"应用当前多选条件');
     return;
   }
@@ -11614,7 +11707,7 @@ function loss_render(){
     </div>`;
   /* 工段 / 机器筛选：与其它分析页同款多选控件（工段先收敛机器范围，机器再叠加） */
   const lossFilterHtml=`<div class="f-input multi-filter loss-section ${lf.sections.length?'has-value':''}" data-all-text="全部工段" onclick="openPageMultiFilter(this,sectionFilterOptions(),pageFilters.loss.sections,pickSectionFilter('loss'))"><span class="dv">${multiFilterText(lf.sections,'全部工段')}</span><span class="arrow">▾</span></div>
-      <div class="f-input multi-filter loss-machine ${lf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,sectionMachineDropdownOptions(pageFilters.loss.sections),pageFilters.loss.machines,pickPageFilter('loss','machines'))"><span class="dv">${multiFilterText(lf.machines,'全部机器')}</span><span class="arrow">▾</span></div>`;
+      <div class="f-input multi-filter loss-machine ${lf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,()=>sectionMachineDropdownOptions(pageFilters.loss.sections),()=>pageFilters.loss.machines,pickPageFilter('loss','machines'))"><span class="dv">${multiFilterText(lf.machines,'全部机器')}</span><span class="arrow">▾</span></div>`;
   /* 指标摘要：随图表 tab 切换口径 */
   const metricsCard=isUtil
     ?`<div class="loss-metric-item primary">
@@ -12228,7 +12321,7 @@ function trend_render(){
   return {title:'',html:`<div class="legacy-page trend-page analysis-page table-fill-page ${detailActive?'trend-detail-active':''}">
     <div class="card compact-filter-card trend-filter-card"><div class="filter-row page-filter-row trend-filter-row">
       <div class="f-input multi-filter trend-section ${tf.sections.length?'has-value':''}" data-all-text="全部工段" onclick="openPageMultiFilter(this,sectionFilterOptions(),pageFilters.trend.sections,pickSectionFilter('trend'))"><span class="dv">${multiFilterText(tf.sections,'全部工段')}</span><span class="arrow">▾</span></div>
-      <div class="f-input multi-filter trend-machine ${tf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,sectionMachineDropdownOptions(pageFilters.trend.sections),pageFilters.trend.machines,pickPageFilter('trend','machines'))"><span class="dv">${multiFilterText(tf.machines,'全部机器')}</span><span class="arrow">▾</span></div>
+      <div class="f-input multi-filter trend-machine ${tf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,()=>sectionMachineDropdownOptions(pageFilters.trend.sections),()=>pageFilters.trend.machines,pickPageFilter('trend','machines'))"><span class="dv">${multiFilterText(tf.machines,'全部机器')}</span><span class="arrow">▾</span></div>
       <div class="f-input trend-dim" onclick="openDropdown(this,trendDimOptionList(),false,v=>setTrendDim(v))"><span class="dv">${tf.dim==='DAY'?'日':'月'}</span><span class="arrow">▾</span></div>
       <div class="f-input trend-range ${tf.dim==='MONTH'?'month-range':''}" onclick="openTrendRangePicker()"><span class="dv">${formatTrendRangeValue(tf.start,tf.dim)} - ${formatTrendRangeValue(tf.end,tf.dim)}</span></div>
       <div class="f-input multi-filter trend-select ${tf.shifts.length?'has-value':''}" data-all-text="全部班次" onclick="openPageMultiFilter(this,shiftDropdownOptions(),pageFilters.trend.shifts,pickPageFilter('trend','shifts'))"><span class="dv">${multiFilterText(tf.shifts,'全部班次')}</span><span class="arrow">▾</span></div>
@@ -13576,7 +13669,8 @@ function renderGroup(gk){
        所以并入同一个分支。 */
   if(tab.key==='history'){ if(ctx.shFocus) centerSwitchHistFocus(); bindSemiNameRoll(); }}
 function setGroupTab(gk,tabId){
-  if(_activeDropdown&&_activeDropdown._requireDone){toast('请先点击“完成”应用当前多选条件');return;}
+  /* R157：多选筛选框改为「点面板外即保存并关闭」—— 这里先保存并关闭旧条件，再继续本动作 */
+  if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);
   /* R83：从 tab 条显式切页 = 用户主动离开「成品订单定位」态，回到常规视图。
      点成品订单的跳转走 render('order')，不经过这里，所以定位态不会被自己清掉。
      R85：同一入口也是「可能品种/模具」搜索的退出点（它的跳转走 goPage('history') + htab 拨位，同样绕过这里）。 */
@@ -13585,7 +13679,8 @@ function setGroupTab(gk,tabId){
   groupState[gk]=tabId; curNav=gk; render(gk); document.getElementById('content').scrollTop=0;}
 /* 重置当前页所有搜索/筛选条件为默认：重渲染即恢复默认筛选标签与默认数据 */
 function resetSearch(){
-  if(_activeDropdown&&_activeDropdown._requireDone){toast('请先点击“完成”应用当前多选条件');return;}
+  /* R157：多选筛选框改为「点面板外即保存并关闭」—— 这里先保存并关闭旧条件，再继续本动作 */
+  if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);
   if(curPage==='pending') pageFilters.pending={team:'',reason:'',productQuery:'',productLabel:'',machines:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59'};
   if(curPage==='history'){
     pageFilters.history={teams:[],reasons:[],productQuery:'',productLabel:'',machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59',page:1,pageSize:12,tab:pageFilters.history.tab||'abnormal'};
@@ -16262,7 +16357,7 @@ function machine_render(){
     .filter(function(h){ return !mf.machines.length||mf.machines.includes(h.name); });
   const filterHtml=`<div class="card compact-filter-card machine-filter-card"><div class="filter-row page-filter-row">
       <div class="f-input multi-filter machine-section-filter ${mf.sections.length?'has-value':''}" data-all-text="全部工段" onclick="openPageMultiFilter(this,sectionFilterOptions(),pageFilters.machine.sections,pickSectionFilter('machine'))"><span class="dv">${multiFilterText(mf.sections,'全部工段')}</span><span class="arrow">▾</span></div>
-      <div class="f-input multi-filter machine-mh-filter ${mf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,sectionMachineDropdownOptions(pageFilters.machine.sections),pageFilters.machine.machines,pickPageFilter('machine','machines'))"><span class="dv">${multiFilterText(mf.machines,'全部机器')}</span><span class="arrow">▾</span></div>
+      <div class="f-input multi-filter machine-mh-filter ${mf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,()=>sectionMachineDropdownOptions(pageFilters.machine.sections),()=>pageFilters.machine.machines,pickPageFilter('machine','machines'))"><span class="dv">${multiFilterText(mf.machines,'全部机器')}</span><span class="arrow">▾</span></div>
       ${liveRefreshHtml()}
       ${autoRefreshControlHtml()}
     </div></div>`;
