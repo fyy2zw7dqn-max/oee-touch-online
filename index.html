@@ -547,7 +547,7 @@ button{font-family:inherit; cursor:pointer; border:none; outline:none;}
   overflow:hidden;display:flex;flex-direction:column;}
 .pop-lg .pgl-head{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:14px 26px 12px;
   border-bottom:2px solid var(--border);}
-.pop-lg .pgl-head h3{margin:0;font-size:26px;}
+.pop-lg .pgl-head h3{margin:0;font-size:22px;}
 .pop-lg .pgl-head .close{float:none;margin-left:auto;flex:0 0 auto;}
 .pop-lg .pgl-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 26px;}
 .pop-lg .pgl-foot{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:12px 26px;
@@ -2395,7 +2395,8 @@ tbody tr:active{background:var(--blue-light);}
   padding:32px 36px; max-height:calc(88% - 96px); overflow:auto;}
 .pop.bottom{width:1000px; border-radius:var(--r-pop); animation:slideUp .25s ease;}
 @keyframes slideUp{from{transform:translateY(40px); opacity:.4;} to{transform:translateY(0); opacity:1;}}
-.pop h3{margin:0 0 20px; font-size:28px;}
+/* R168：所有弹窗标题字号统一为 22px（以原因选择弹窗 .rp-title 为基准；原 28px） */
+.pop h3{margin:0 0 20px; font-size:22px;}
 .pop .close{float:right; width:52px; height:52px; border-radius:12px; background:#f2f4f7; font-size:26px; color:var(--t2);}
 .pop-history-btn{float:right; margin-right:10px; height:52px; padding:0 18px; border-radius:12px;
   background:#F4F8FD; border:1.5px solid rgba(8,114,201,.2); color:var(--blue);
@@ -2429,7 +2430,7 @@ tbody tr:active{background:var(--blue-light);}
 .pop-match .om-wrap{display:flex;flex-direction:column;height:100%;}
 .pop-match .om-head{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:16px 26px 14px;
   border-bottom:1.5px solid var(--border);position:relative;}
-.pop-match .om-head h3{margin:0;font-size:24px;}
+.pop-match .om-head h3{margin:0;font-size:22px;}
 /* R98：副标题由「订单号 · 主机」改为「成品订单 / 成品名称」，名称 20+ 字 ⇒ 只给订单号用等宽体，
    名称保持正文字体，免得整串读起来像代码。
    ⚠ R101：改为**整条水平居中** + 字号加大 2 档（15 → 17px）。
@@ -2755,7 +2756,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 /* 原因维护弹窗：顶部对齐顶栏底部（96px），左右边距各50px；按钮置于边框底部并留适当距离 */
 .pop.reason-pop,.pop.bf-pop{width:calc(100% - 100px); max-width:none; padding:22px 28px 0; position:absolute; top:96px; bottom:0; left:50px; right:50px; transform:none; min-height:520px; display:flex; flex-direction:column; overflow:hidden;}
 .pop.reason-pop .pop-header,.pop.bf-pop .pop-header{margin-bottom:6px; padding:0 2px; flex-shrink:0;}
-.pop.reason-pop .pop-header .pop-title,.pop.bf-pop .pop-header .pop-title{font-size:21px;}
+.pop.reason-pop .pop-header .pop-title,.pop.bf-pop .pop-header .pop-title{font-size:22px;}
 .pop.reason-pop .pop-header .close,.pop.bf-pop .pop-header .close{float:none; width:44px; height:44px; border-radius:10px; font-size:24px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 44px;}
 .pop.reason-pop .pop-actions,.pop.bf-pop .pop-actions{margin:0 -28px; padding:10px 28px 12px; flex-shrink:0;}
 /* 补录弹窗：内容区独立滚动（弹窗宽度/高度与「确认原因」页面保持一致） */
@@ -2791,7 +2792,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 /* R126 清理：原处重复写了 `display:flex; align-items:center; justify-content:space-between`，
    这 3 条与全局 `.pop-header`（本文件同段落上方）**逐字相同**（实测 computed display=flex）⇒ 已删，只留本表真正不同的两条。 */
 .split-result-pop .pop-header{margin-bottom:10px; padding:0 2px;}
-.split-result-pop .pop-header .pop-title{font-size:21px;}
+.split-result-pop .pop-header .pop-title{font-size:22px;}
 .split-result-pop .pop-header .close{width:44px; height:44px; border-radius:10px; font-size:24px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 44px;}
 .split-result{margin:6px 0 4px;}
 .split-result-tip{font-size:16px; color:var(--t2); margin-bottom:14px; padding:10px 12px; background:#F4F8FD; border:1px solid var(--border); border-radius:10px;}
@@ -3487,7 +3488,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-cur-out{font-weight:700;color:var(--t1);}
 /* 台账明细弹层（与班组对标下钻弹层同一套尺寸口径） */
 .pop.mold-ledger-pop{width:1080px;max-width:95%;padding:24px 28px;max-height:calc(90% - 96px);}
-.pop.mold-ledger-pop h3{margin:0 0 6px;font-size:24px;}
+.pop.mold-ledger-pop h3{margin:0 0 6px;font-size:22px;}
 .pop.mold-ledger-pop .close{width:44px;height:44px;font-size:22px;border-radius:10px;}
 .mold-ledger-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;font-size:14px;color:var(--t2);
   padding:8px 12px;background:#F8FAFC;border-radius:10px;margin-bottom:10px;}
@@ -3604,7 +3605,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-ledger-none{padding:30px;text-align:center;color:var(--t2);font-size:16px;}
 /* ---- 单据详情弹层（表单） ---- */
 .pop.mold-doc-pop{width:860px;max-width:94%;padding:24px 28px;max-height:calc(90% - 96px);}
-.pop.mold-doc-pop h3{margin:0 0 12px;font-size:24px;}
+.pop.mold-doc-pop h3{margin:0 0 12px;font-size:22px;}
 .pop.mold-doc-pop .close{width:44px;height:44px;font-size:22px;border-radius:10px;}
 .mold-doc-back{margin:0 0 12px;}
 /* 「返回模具台账」：openPop 整层替换会冲掉台账弹层，必须留这条回退路径 */
@@ -3896,7 +3897,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
    只作身份标记，不再承载样式（原先挂在 .team-drill-pop 上的 10 条规则全部改挂到 .drill-pop）。
    （.team-drill-sub / .team-drill-tools 是独立的类名，不受此重命名影响） */
 .pop.drill-pop{width:1080px;max-width:95%;padding:24px 28px;max-height:calc(90% - 96px);}
-.pop.drill-pop h3{margin:0 0 4px;font-size:24px;}
+.pop.drill-pop h3{margin:0 0 4px;font-size:22px;}
 .pop.drill-pop .close{width:44px;height:44px;font-size:22px;border-radius:10px;}
 .team-drill-sub{font-size:14px;color:var(--t2);margin-bottom:10px;line-height:1.4;}
 .team-drill-sub b{color:var(--t1);}
@@ -4076,6 +4077,10 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .trend-filter-row .trend-range.month-range,
 .team-filter-row .team-range,
 .team-filter-row .team-range.month-range{width:auto!important;flex:0 0 auto!important;min-width:0!important;}
+/* ============ R168 · 搜索弹窗内搜索框宽度 = 弹窗内容区全宽（半成品订单/名称、成品订单/名称及历史页成品搜索共用） ============
+   ☠ 只作用 <input>（三个搜索弹窗）；筛选行里的 .history-product-search 是 <div>（.history-filter 内），不受影响；
+   五个日期范围弹窗的 .f-input 是 <div> 且在 .shift-range-fields 里，也不受影响。 */
+.pop input.history-product-search{display:block;width:100%;}
 /* ============ R167 · 异常核对页筛选行：机器框对齐待确认原因页，两个订单搜索框吃掉剩余宽度 ============ */
 /* 用户原话：「异常核对页面修改：机器筛选框的宽度调整为与待确认原因页面宽度一致；加大半成品订单或名称、成品订单或名称
    选择框的宽度，前提是筛选条件一行显示。」
