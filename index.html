@@ -4076,6 +4076,17 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .trend-filter-row .trend-range.month-range,
 .team-filter-row .team-range,
 .team-filter-row .team-range.month-range{width:auto!important;flex:0 0 auto!important;min-width:0!important;}
+/* ============ R167 · 异常核对页筛选行：机器框对齐待确认原因页，两个订单搜索框吃掉剩余宽度 ============ */
+/* 用户原话：「异常核对页面修改：机器筛选框的宽度调整为与待确认原因页面宽度一致；加大半成品订单或名称、成品订单或名称
+   选择框的宽度，前提是筛选条件一行显示。」
+   实测（1280×1024）：筛选行内容宽 1144、gap 9px；待确认原因页机器框 = 180px（.pending-machine-filter 同为 180）。
+   异常核对页原为 机器 296 + 两订单框 230×2 + 时间框 247.9 + 重置 64 + 4×9 gap = 1103.9 ⇒ 仅剩 40.1px。
+   ✅ 机器框 296→180（释放 116）后，两订单框改 width:auto + flex:1 1 0 ⇒ 自动均分全部剩余，
+      当前算出各 308.05（原 230，+78）；日期文案若有像素级变化，两框自动让位，永不换行。
+   ☠ 别给两框写死像素：时间框 R166 起是 width:auto（随文案变），写死会把行顶溢。
+   ☠ min-width:230 是保底（= 改前宽度），仅在极端拥挤时生效；真触发说明该行又加了新控件，须重新算预算。 */
+.order-filter-row .order-machine-filter{width:180px!important;flex:0 0 180px!important;min-width:180px!important;}
+.order-filter-row .order-product-search{width:auto!important;flex:1 1 0!important;min-width:230px!important;}
 </style>
 <style id="__dm_no_drag_style__">* { -webkit-user-drag: none !important; }</style><style id="__dm_bindable_badge_style__">[data-sp-bindable="database"]{outline:1px dashed #0088ff;outline-offset:2px;border-radius:4px;}[data-sp-bindable="database"] *{pointer-events:none !important;transition:none !important;animation:none !important;}[data-sp-bindable="database"]{transition:none !important;animation:none !important;}
 </style></head>
