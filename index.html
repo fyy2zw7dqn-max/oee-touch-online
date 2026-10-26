@@ -4300,7 +4300,7 @@ const pageFilters={
   /* 班组对标：时间段支持「日 / 月」两种模式，两种模式都可多选（空选 = 全部） */
   team:{sections:[],timeMode:'day',start:'2026-08-23',end:'2026-08-25',teams:[],machines:[],products:[]},
   machine:{sections:[],machines:[]},
-  order:{semiQuery:'',productQuery:'',onlyAbnormal:true,machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59'},
+  order:{semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:true,machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59'},
   progress:{sections:[],status:'unfinished',orderQuery:'',nameQuery:''},
   process:{start:'2026-08-26 13:09:33',end:'2026-08-26 15:09:33',span:'2h'}
 };
@@ -7938,7 +7938,7 @@ function openOrderAbnormalFocus(orderNo,machine){
   const from=new Date(center.getTime()-ORDER_FOCUS_HALF_MS), to=new Date(center.getTime()+ORDER_FOCUS_HALF_MS);
   ctx.orderFocus={orderNo:rec.orderNo,machine:rec.machine,center:rec.date,from:orderFocusDT(from),to:orderFocusDT(to),expanded:false};
   /* 直接改写本页筛选条件 —— 筛选行控件会同步反映出「主机 / 时间段」，用户的认知与控件一致 */
-  Object.assign(pageFilters.order,{semiQuery:'',productQuery:'',onlyAbnormal:false,machines:[rec.machine],start:ctx.orderFocus.from,end:ctx.orderFocus.to});
+  Object.assign(pageFilters.order,{semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:false,machines:[rec.machine],start:ctx.orderFocus.from,end:ctx.orderFocus.to});
   tablePaging.order.page=1;
   /* render('order') 会经 mapSubToGroup 落到 R83 迁入后的 abn 组，并保持 tab=order */
   render('order'); syncNavActive();
@@ -7960,7 +7960,7 @@ function expandOrderFocus(){
 /* 退出定位：清空定位状态并把本页筛选恢复默认 */
 function clearOrderFocus(){
   ctx.orderFocus=null;
-  pageFilters.order={semiQuery:'',productQuery:'',onlyAbnormal:true,machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59'};
+  pageFilters.order={semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:true,machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59'};
   tablePaging.order.page=1;
   render('order');
   toast('已退出定位');
@@ -11306,12 +11306,17 @@ function renderOrderSemiResults(query){
 function pickOrderSemi(code){
   const selected=orderSemiOptions.find(o=>o.code===code);if(!selected)return;
   pageFilters.order.semiQuery=selected.code;
+  /* R162：选中半成品订单同步带出半成品名称（与成品侧同口径：剥 10 位批次尾缀，半成品名通常无尾缀、原样通过） */
+  pageFilters.order.semiLabel=selected.code+' / '+stripSemiOrderSuffix(selected.name);
   tablePaging.order.page=1;
   closePop();goPage('order');toast('已按半成品订单 / 半成品名称自动查询');
 }
 function confirmOrderSemiSearch(){
   const value=(document.getElementById('orderSemiPopupQuery').value||'').trim();
+  /* R162：命中订单号 / 原始名称 / 剥尾缀名称三者之一都算命中；自由文本（都没命中）原样回显 */
+  const selected=orderSemiOptions.find(o=>o.code===value||o.name===value||stripSemiOrderSuffix(o.name)===value);
   pageFilters.order.semiQuery=value;
+  pageFilters.order.semiLabel=selected?selected.code+' / '+stripSemiOrderSuffix(selected.name):value;
   tablePaging.order.page=1;
   closePop();goPage('order');toast('已按半成品订单或名称筛选');
 }
@@ -11333,12 +11338,19 @@ function renderOrderProductResults(query){
 function pickOrderProduct(code){
   const selected=orderProductOptions.find(o=>o.code===code);if(!selected)return;
   pageFilters.order.productQuery=selected.code;
+  /* R162：选中成品订单同步带出成品名称。☠ 名称要与列表页同口径 —— r.product 可能带
+     「/10位批次尾缀」，列表显示前会 stripSemiOrderSuffix() ⇒ 这里同样剥掉再拼，否则
+     搜索框与表格两处名称对不上（实测 1067786020 尾缀 /1026081811）。 */
+  pageFilters.order.productLabel=selected.code+' / '+stripSemiOrderSuffix(selected.name);
   tablePaging.order.page=1;
   closePop();goPage('order');toast('已按成品订单 / 成品名称自动查询');
 }
 function confirmOrderProductSearch(){
   const value=(document.getElementById('orderProductPopupQuery').value||'').trim();
+  /* R162：命中订单号 / 原始名称 / 剥尾缀名称三者之一都算命中；自由文本原样回显 */
+  const selected=orderProductOptions.find(o=>o.code===value||o.name===value||stripSemiOrderSuffix(o.name)===value);
   pageFilters.order.productQuery=value;
+  pageFilters.order.productLabel=selected?selected.code+' / '+stripSemiOrderSuffix(selected.name):value;
   tablePaging.order.page=1;
   closePop();goPage('order');toast('已按成品订单或名称筛选');
 }
@@ -12582,8 +12594,11 @@ function order_render(){
     ${orderFocusBarHtml()}
     <div class="card compact-filter-card order-filter-card"><div class="filter-row page-filter-row order-filter-row">
       <div class="f-input multi-filter order-machine-filter ${of.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,orderMachineOptions(),pageFilters.order.machines,pickPageFilter('order','machines'))"><span class="dv">${multiFilterText(of.machines,'全部机器')}</span><span class="arrow">▾</span></div>
-      <div class="f-input history-product-search order-product-search ${of.semiQuery?'':'placeholder'}" id="orderSemiSearch" onclick="openOrderSemiSearch()" title="${of.semiQuery||'半成品订单或名称'}"><span class="dv">${of.semiQuery||'半成品订单或名称'}</span></div>
-      <div class="f-input history-product-search order-product-search ${of.productQuery?'':'placeholder'}" id="orderProductSearch" onclick="openOrderProductSearch()" title="${of.productQuery||'成品订单或名称'}"><span class="dv">${of.productQuery||'成品订单或名称'}</span></div>
+      <div class="f-input history-product-search order-product-search ${of.semiQuery?'':'placeholder'}" id="orderSemiSearch" onclick="openOrderSemiSearch()" title="${of.semiLabel||of.semiQuery||'半成品订单或名称'}"><span class="dv">${of.semiLabel||of.semiQuery||'半成品订单或名称'}</span></div>
+      <div class="f-input history-product-search order-product-search ${of.productQuery?'':'placeholder'}" id="orderProductSearch" onclick="openOrderProductSearch()" title="${of.productLabel||of.productQuery||'成品订单或名称'}"><span class="dv">${of.productLabel||of.productQuery||'成品订单或名称'}</span></div>
+      <!-- R162：两框选中后回显「订单号 / 名称」；内容超宽时由 bindFilterTextScroll() 统一接管为来回滚动
+           （与全站筛选/搜索框同一套跑马灯：.dv 外层裁切 + .dv-mq 内层 transform 平移、约 26px/s、两端停顿），
+           故这里不额外加滚动类/动画，别在 .order-product-search 上另起一套样式。 -->
       <div class="f-input order-range" onclick="openOrderRangePicker()" title="${of.start} ～ ${of.end}"><span class="dv">◷ ${shortHistoryDateTime(of.start)}　-　${shortHistoryDateTime(of.end)}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
@@ -13711,7 +13726,7 @@ function resetSearch(){
   if(curPage==='loss') pageFilters.loss={sections:[],reason:'',machines:[],mode:'CURRENT_SHIFT',shifts:[],teams:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59',chartTab:'TIME_EFF',drill:''},tablePaging.loss={page:1,pageSize:8};
   if(curPage==='trend'){pageFilters.trend={sections:[],dim:'DAY',start:'2026-08-11',end:'2026-08-25',machines:pelletExpandMachines(),shifts:[],teams:[],materials:[],includeUnfinished:true,onlyTime:false,detailMetric:'',detailPeriod:''};tablePaging.trendDetail={page:1,pageSize:4};}
   if(curPage==='team') pageFilters.team={sections:[],timeMode:'day',start:'2026-08-23',end:'2026-08-25',teams:[],machines:[],products:[]};
-  if(curPage==='order'){pageFilters.order={semiQuery:'',productQuery:'',onlyAbnormal:true,machines:pelletExpandMachines(),start:'2026-08-20 00:00',end:'2026-08-26 23:59'};ctx.orderFocus=null;}
+  if(curPage==='order'){pageFilters.order={semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:true,machines:pelletExpandMachines(),start:'2026-08-20 00:00',end:'2026-08-26 23:59'};ctx.orderFocus=null;}
   if(curPage==='progress') pageFilters.progress={sections:[],status:'unfinished',orderQuery:'',nameQuery:''};
   if(curPage==='machine') pageFilters.machine={sections:[],machines:[]};
   if(curPage==='moldhist') pageFilters.moldhist={machines:[],moldStatus:['在用'],place:[],view:'latest'};
