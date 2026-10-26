@@ -4471,6 +4471,13 @@ function sectionMachineScope(sections){
 function sectionMachineMatch(machine,sections){
   return !sections||!sections.length||sectionMachineScope(sections).indexOf(machine)>=0;
 }
+/* R165（用户要求「下拉筛选条件的全选（如全部机器），再次点击修改为类似反选效果」）：
+   多选筛选的「全部 X」项 = **全选开关**：
+     · 已在「全部」态（_sel 为空即代表全部）再点一次 ⇒ 全不选（_sel 写哨兵 FILTER_NONE，所有项取消勾选，结果集为空）
+     · 从「全不选 / 部分选中」点它 ⇒ 回到全选（_sel = []）
+   ⚠ 全不选必须用哨兵而不是空数组 —— 空数组在本站语义里就等于「全部」（各处过滤都写 `!arr.length || arr.includes(x)`），
+     否则会出现「UI 上一个都没勾、数据却还是全部」的自相矛盾。 */
+const FILTER_NONE='__NONE__';
 /* 机器下拉：只列出当前工段范围内的机器，避免「选了制粒还能勾到膨化机」这种自相矛盾的组合 */
 function sectionMachineDropdownOptions(sections){
   return [{v:'__ALL__',t:'全部机器'}].concat(sectionMachineScope(sections).map(m=>({v:m,t:`<span class="machine-option-label">${machineStatusDot(m)}${m}</span>`})));
@@ -4500,7 +4507,12 @@ function pickSectionFilter(key){
     const f=pageFilters[key];
     f.sections=v;
     const scope=sectionMachineScope(v);
-    if(f.machines&&f.machines.length) f.machines=f.machines.filter(m=>scope.indexOf(m)>=0);
+    if(f.machines&&f.machines.length){
+      /* R165：全不选（__NONE__）要保留语义，别被工段收敛清成空数组（空数组 = 全部） */
+      const keepNone=f.machines.indexOf(FILTER_NONE)>=0;
+      f.machines=f.machines.filter(m=>scope.indexOf(m)>=0);
+      if(keepNone&&!f.machines.length)f.machines=[FILTER_NONE];
+    }
     if(tablePaging[key]) tablePaging[key].page=1;
     if(key==='trend'){clearTrendDetail();return;}
     goPage(key);
@@ -4510,7 +4522,12 @@ function teamDropdownOptions(){return [{v:'__ALL__',t:'全部班组'},{v:'A班',
 function shiftDropdownOptions(){return [{v:'__ALL__',t:'全部班次'},{v:'早班',t:'早班'},{v:'中班',t:'中班'},{v:'夜班',t:'夜班'}];}
 function materialDropdownOptions(){return [{v:'__ALL__',t:'运营料型'},{v:'水产料',t:'水产料'},{v:'畜禽料',t:'畜禽料'}];}
 function reasonDropdownOptions(){return [{v:'__ALL__',t:'全部原因'},{v:'设备故障',t:'设备故障'},{v:'无生产计划',t:'无生产计划'},{v:'换品种',t:'换品种'},{v:'换模具',t:'换模具'}];}
-function multiFilterText(values,allText){return !values||!values.length?allText:values.join('、');}
+function multiFilterText(values,allText){
+  if(!values||!values.length)return allText;
+  /* R165：全不选（哨兵 __NONE__）⇒ chip 显示「未选任何机器 / 未选任何班组…」（把「全部」前缀换成「未选任何」） */
+  if(values.indexOf(FILTER_NONE)>=0)return '未选任何'+String(allText||'项').replace(/^全部/,'');
+  return values.join('、');
+}
 function openPageMultiFilter(anchor,options,values,onApply){
   /* R157：多选筛选「点面板外即保存」⇒ 点另一个筛选触发器时，旧面板先在**这里**按「完成」
      保存并关闭（其回调会整页重渲染、锚点被替换 ⇒ _ddRelocate 找回新节点）。
@@ -4733,7 +4750,7 @@ function renderShiftHistory(){
     <div class="sh-hist-sub">订单 ${totalN} 条 · 完成 <span class="sh-hist-done" title="其中 ${auto} 条为已切换到下一订单、无需人工确认">${doneN}</span> · 未完成 ${h.undone} · 班组时长 <span class="sh-hist-dur${over?' is-over':''}">${shiftDurText(dur)}</span></div>
   </div>`;}).join('');
   const filterBar=`<div class="sh-hist-filter">
-    <div class="f-input multi-filter ${f.teams.length?'has-value':''}" data-all-text="全部班组" onclick="openShiftHistTeamFilter(this)"><span class="dv">${f.teams.length?f.teams.join('、'):'全部班组'}</span><span class="arrow">▾</span></div>
+    <div class="f-input multi-filter ${f.teams.length?'has-value':''}" data-all-text="全部班组" onclick="openShiftHistTeamFilter(this)"><span class="dv">${multiFilterText(f.teams,'全部班组')}</span><span class="arrow">▾</span></div>
     <div class="f-input ${rangeSet?'has-value':''}" onclick="openShiftHistRangePicker()"><span class="dv">${rangeText}</span><span class="arrow">▾</span></div>
     <button class="btn btn-ghost sh-hist-reset" onclick="resetShiftHistFilter()">重置</button>
     <span class="sh-hist-count">共 ${matched.length} 条</span>
@@ -4963,9 +4980,11 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
     const selected=Array.isArray(anchorEl._sel)?anchorEl._sel:[];
     /* “全部”语义（未选任何具体项）时，所有具体选项均显示为勾选状态 */
     const allState=multi&&selected.length===0;
+    /* R165：全不选态（哨兵）⇒ 「全部 X」与所有具体项都显示为未勾选 */
+    const noneState=multi&&selected.indexOf(FILTER_NONE)>=0;
     const list=searchCfg?options.filter(opt=>ddMatchText(ddHay(opt),ddQuery)):options;
     if(!list.length) return '<div class="dropdown-empty">'+((searchCfg&&searchCfg.empty)||'没有匹配项')+'</div>';
-    return list.map(opt=>{const sel=multi?(opt.v==='__ALL__'?allState:(allState||selected.includes(opt.v))):(anchorEl._sel===opt.v);return `<div class="dropdown-item ${sel?'selected':''}" data-v="${opt.v}"><span class="chk">${sel?'✓':''}</span>${opt.t}</div>`;}).join('');
+    return list.map(opt=>{const sel=multi?(opt.v==='__ALL__'?allState:(noneState?false:(allState||selected.includes(opt.v)))):(anchorEl._sel===opt.v);return `<div class="dropdown-item ${sel?'selected':''}" data-v="${opt.v}"><span class="chk">${sel?'✓':''}</span>${opt.t}</div>`;}).join('');
   };
   const bindItems=()=>{
     panel.querySelectorAll('.dropdown-item').forEach(item=>{item.onclick=()=>{
@@ -4973,7 +4992,14 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
       if(multi){
         if(!Array.isArray(anchorEl._sel))anchorEl._sel=[];
         const allOpts=options.filter(o=>o.v!=='__ALL__').map(o=>o.v);
-        if(v==='__ALL__')anchorEl._sel=[];
+        const noneState=anchorEl._sel.indexOf(FILTER_NONE)>=0;
+        if(v==='__ALL__'){
+          /* R165：「全部 X」= 全选开关。已在「全部」态再点 ⇒ 全不选（写哨兵）；否则 ⇒ 回到全选 */
+          anchorEl._sel=anchorEl._sel.length===0?[FILTER_NONE]:[];
+        }
+        else if(noneState){ /* 全不选态点具体项：从这一项重新开始，别把哨兵带进选择集 */
+          anchorEl._sel=[v];
+        }
         else if(anchorEl._sel.length===0){ /* 当前为“全部”：取消勾选点击项，保留其余全选 */
           anchorEl._sel=allOpts.filter(x=>x!==v);
         }
@@ -12928,7 +12954,7 @@ function orderProgress(){
       <span class="order-stat">已完工：${doneCnt}</span>
       <span class="order-stat">生产中：${runningCnt}</span>
       <span class="order-stat">未开始：${waitCnt}</span>
-      <span class="order-stat">筛选工段：${gf.sections.length?gf.sections.join('、'):'全部'}</span>
+      <span class="order-stat">筛选工段：${gf.sections.indexOf(FILTER_NONE)>=0?'未选任何工段':(gf.sections.length?gf.sections.join('、'):'全部')}</span>
     </div>
     <div class="card bottom-table-card order-table-card"><div class="tbl-wrap">
       <table class="progress-data-table"><thead><tr><th>半成品订单 / 名称</th><th>配料进度(实际/计划)</th><th>成品订单 / 成品名称</th><th>成型进度(实际/计划)</th></tr></thead>
