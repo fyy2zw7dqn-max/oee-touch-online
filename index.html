@@ -1040,7 +1040,12 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .reason-picker{display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:22px; box-shadow:0 16px 48px rgba(0,0,0,.22); border:2.5px solid rgba(8,114,201,.35);}
 .reason-picker .rp-titlebar{display:flex; align-items:center; gap:10px; padding:8px 16px; background:#fff; border-bottom:1.5px solid rgba(8,114,201,.35); flex-shrink:0;}
 .reason-picker .rp-title{font-size:22px; font-weight:700; color:var(--t1); flex-shrink:0;}
-.reason-picker .rp-cur{font-size:17px; font-weight:600; color:var(--blue); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* R163（用户要求 3.2）：标题「原因选择」右侧常驻操作提示（勾选框 / 原因文字 = 确认原因）。
+   灰色 15px、单行不折行；「当前：…」（.rp-cur）改 `margin-left:auto` 贴右，
+   两者不再抢同一段空白（否则 17 字提示与「当前：一级 / 待选二级」会挤在一起）。
+   ⚠ 换品种 / 换模具 的订单/模具选择阶段不渲染这一行（右侧是整卡选项、没有勾选框，文案会指错对象）。 */
+.reason-picker .rp-tip{font-size:15px; font-weight:500; color:var(--t2); flex:0 0 auto; white-space:nowrap;}
+.reason-picker .rp-cur{font-size:17px; font-weight:600; color:var(--blue); flex:0 1 auto; margin-left:auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .reason-picker .rp-x{width:30px; height:30px; border-radius:50%; border:1.5px solid var(--border); background:#F4F8FD; color:var(--t2); font-size:19px; line-height:1; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; padding:0;}
 .reason-picker .rp-x:hover,.reason-picker .rp-x:active{background:var(--blue-light); color:var(--blue); border-color:var(--blue);}
 .reason-picker .rp-head{display:flex; background:#F4F8FD; border-bottom:1.5px solid var(--border); flex-shrink:0;}
@@ -1082,16 +1087,26 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .reason-picker .rp-lv1-sub .rp-item{font-size:21px;}
 .reason-picker .rp-item{height:56px; line-height:56px; padding:0 16px; border-radius:10px; font-size:21px; font-weight:500;
   color:var(--t1); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background .1s,color .1s; flex-shrink:0;}
-/* R87-2：条目 = 双热区。文字左、勾选方块右：
-     · 点右侧 .rp-check → 选定（.on 时方块填充蓝底白勾，即需求里的 ✅）
-     · 点其余空白处 → 在标题栏解释区预览该原因的业务解释
+/* R87-2：条目 = 多热区。勾选方块在左、文字在右：
+     · 点左侧 .rp-check → 选定（.on 时方块填充蓝底白勾，即需求里的 ✅）
+     · 点原因文字（.rp-txt）→ 同样选定（R163 用户要求 3.1 新增，与勾选框等价）
+     · 点文字右侧空白处 → 在标题栏解释区预览该原因的业务解释（R163 用户要求 3.3）
    ⚠ 原 `white-space:nowrap/overflow:hidden/text-overflow:ellipsis` 是给整行文字用的，
      改成 flex 后这两件必须挪到 .rp-txt 上，否则省略号会落到 flex 容器上（不生效）。 */
 /* R158（用户要求：勾选框与右侧文字的间距 = 1 个汉字的宽度）：
    R136 起勾选框在文字左侧，间距由本行 flex gap 决定。条目字号 21px，汉字为全角
    ⇒ 1 个汉字宽 = 21px，故 gap 10px → 21px（一级 / 二级 / 品种选择面板共用本规则）。 */
 .reason-picker .rp-item{display:flex; align-items:center; gap:21px; white-space:normal; overflow:visible;}
-.reason-picker .rp-item .rp-txt{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* ⚠⚠ R163（用户要求 3.1 / 3.3）：热区重新划分 —— **文字 = 选定原因**，**文字右侧空白处 = 预览业务解释**。
+   ⇒ `.rp-txt` 由 `flex:1 1 auto` 改 `flex:0 1 auto`：元素贴住文字本身（不再撑满整行），
+     剩下的行内空间才是「文字右侧空白处」；文字过长时仍按 min-width:0 + ellipsis 收缩。
+   ☠ 别改回 `flex:1 1 auto`：那样 `.rp-txt` 吃掉整行，空白处只剩 padding 16px，
+     而所有文字区的点击都会命中「选定」，「点空白看解释」直接失效。 */
+.reason-picker .rp-item .rp-txt{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* 末尾预留 28px 空白条 = 最小可点的「预览解释」热区：二级三列网格里长文字（如「更换环模/膨化模」）
+   会把可用宽度占满，没有这条整行都是文字 ⇒ 该条目的业务解释点不出来。
+   ⚠ 伪元素不进 `children`，r143 G1 / r158 ①d 的 [rp-check, rp-txt] 子元素顺序断言不受影响。 */
+.reason-picker .rp-item::after{content:''; flex:0 0 28px;}
 .reason-picker .rp-check{flex:0 0 30px; width:30px; height:30px; padding:0; box-sizing:border-box;
   border:1.5px solid var(--border); border-radius:9px; background:#fff; color:transparent;
   font-size:17px; font-weight:800; line-height:1; cursor:pointer;
@@ -1587,7 +1602,10 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .sh-machine-tabs::-webkit-scrollbar{display:none;}
 .sh-machine-tabs .process-machine-tab{height:28px; padding:0 9px; font-size:12px; border-radius:5px;}
 .sh-machine-tabs .process-machine-tab::before{width:6px; height:6px;}
-.sh-date-input{height:28px; min-width:140px; flex-shrink:0; padding:0 10px!important; border-radius:6px!important; border-width:1px!important;}
+/* R163：文案由「▣ 08/20 - 08/26」升为「08/20 00:00 ～ 08/26 23:59」⇒ 宽度改由内容决定
+   （min-width:0 + 不换行），否则 140px 会把新文案挤成省略号。
+   高度/字号保持 28px/13px —— 与本行左侧 28px 的主机 tab 同高，不把筛选行撑高。 */
+.sh-date-input{height:28px; min-width:0; flex-shrink:0; white-space:nowrap; padding:0 10px!important; border-radius:6px!important; border-width:1px!important;}
 .sh-date-input .dv{font-size:13px!important;}
 /* R90：原「本窗 N 次切换」统计文字已替换为核查提示。
    ⚠ 提示文案较长（~30 字）⇒ 不再 flex-shrink:0，允许收缩 + 单行省略，
@@ -3937,7 +3955,9 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .reason-picker .rp-ex-v b{color:var(--blue); font-weight:700;}
 .reason-picker .rp-ex-empty{flex:1 1 auto; min-width:0; font-size:15px; color:var(--t2);
   white-space:normal; overflow-wrap:anywhere;}
-.reason-picker .rp-cur{flex:1 1 auto;}
+/* ⚠ R163（用户要求 3.2）：这里的 `.rp-cur{flex:1 1 auto}` 已删除 —— 标题栏新增「操作提示」后，
+   「当前：…」改由基础规则（第 1048 行附近）的 `flex:0 1 auto + margin-left:auto` 贴右，
+   若这里再写 flex:1 会把提示与当前路径挤在一起（本行是**后置覆盖**，优先级更高，踩过）。 */
 
 /* ================= R45-2 全局间距统一 + 图表文字统一 =================
    标准（板块之间）= var(--gap-block) 10px：卡片↔卡片、筛选行↔内容、表↔分页、图表↔汇总表。
@@ -4151,7 +4171,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
       <div class="f-input multi-filter order-machine-filter " data-all-text="全部机器" onclick="openPageMultiFilter(this,orderMachineOptions(),pageFilters.order.machines,pickPageFilter('order','machines'))"><span class="dv">全部机器</span><span class="arrow">▾</span></div>
       <div class="f-input history-product-search order-product-search placeholder" id="orderSemiSearch" onclick="openOrderSemiSearch()" title="半成品订单或名称"><span class="dv">半成品订单或名称</span></div>
       <div class="f-input history-product-search order-product-search placeholder" id="orderProductSearch" onclick="openOrderProductSearch()" title="成品订单或名称"><span class="dv">成品订单或名称</span></div>
-      <div class="f-input order-range" onclick="openOrderRangePicker()" title="2026-08-20 00:00 ～ 2026-08-26 23:59"><span class="dv">◷ 08/20 00:00　-　08/26 23:59</span></div>
+      <div class="f-input order-range" onclick="openOrderRangePicker()" title="2026-08-20 00:00 ～ 2026-08-26 23:59"><span class="dv">08/20 00:00　-　08/26 23:59</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
     <div class="order-sub-toolbar"><button class="order-sound-btn" onclick="toast('异常提示声音已消除')">消除声音</button>
@@ -4293,7 +4313,10 @@ const ORDER_EXECUTION_DATA=[
 const pageFilters={
   pending:{team:'',reason:'',productQuery:'',productLabel:'',machines:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59'},
   history:{teams:[],reasons:[],productQuery:'',productLabel:'',machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59',page:1,pageSize:12,tab:'abnormal'},
-  switchHist:{machine:'1#制粒',start:'2026-08-20',end:'2026-08-26',page:1,pageSize:10},
+  /* ⚠ R163：品种/模具历史页的「选择班次时间范围」改用与待确认原因页同款**时间**选择器（精确到分），
+     起止值口径随之从 YYYY-MM-DD 升为 YYYY-MM-DD HH:MM（全站筛选值口径统一）。
+     旧值仍兼容：`shRangeDT()` 对 ≤10 位的纯日期按「当天 00:00 / 23:59:59」补齐。 */
+  switchHist:{machine:'1#制粒',start:'2026-08-20 00:00',end:'2026-08-26 23:59',page:1,pageSize:10},
   shift:{start:'2026-08-23',end:'2026-08-25',machines:[],includeRunning:true,ignoreCut:false},
   loss:{sections:[],reason:'',machines:[],mode:'CURRENT_SHIFT',shifts:[],teams:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59',chartTab:'TIME_EFF',drill:''},
   trend:{sections:[],dim:'DAY',start:'2026-08-11',end:'2026-08-25',machines:[],shifts:[],teams:[],materials:[],includeUnfinished:true,onlyTime:false,detailMetric:'',detailPeriod:''},
@@ -7986,10 +8009,14 @@ function orderFocusBarHtml(){
     </span></div>`;
 }
 /* ---- R85：异常核对页的成品订单 → 「品种/模具历史」搜出可能的品种/模具 ---- */
-/* 该页筛选只有「日期」粒度 ⇒ 把 ±12 小时窗口换算成起止日期；精确到分钟的窗口由 ctx.shFocus 在渲染时叠加。 */
-function shFocusDate(d){
-  const p=n=>String(n).padStart(2,'0');
-  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+/* R163：品种/模具历史页的筛选值已升级为**时间**范围（「YYYY-MM-DD HH:MM」，与待确认原因页同款选择器），
+   这里把筛选值转成可比较的 Date。兼容历史的纯日期值（≤10 位）：
+     开始 ⇒ 当天 00:00:00；结束 ⇒ 当天 23:59:59（老夹具 / 老代码仍写 '2026-08-20' 这种值）。
+   ☠ 别写成 `sf.start+'T00:00:00'` 硬拼：值带时分后拼出来是非法日期，筛选会整体失效（列表被清空）。 */
+function shRangeDT(value,isEnd){
+  const t=String(value==null?'':value).trim(); if(!t) return null;
+  const full=t.length<=10?(t+(isEnd?' 23:59:59':' 00:00:00')):t;
+  return new Date(full.replace(' ','T'));
 }
 /* ---- R94：成品名称去掉尾部半成品订单号后缀（如 /1026081811 或 /2005048928） ----
    ⚠ 既有实现是 `/\/20[0-9]{8}/g`，只匹配 `20` 开头 ⇒ mock 里大量 `10` 开头的后缀
@@ -8019,8 +8046,9 @@ function openPossibleVarietyMold(orderNo,machine){
   ctx.shFocus={orderNo:rec.orderNo,machine:rec.machine,abnStatus:rec.abnStatus,center:orderFocusDT(center),
     from:orderFocusDT(from),to:orderFocusDT(to),expanded:false,hit:null,gap:0,
     productName:stripSemiOrderSuffix(rec.product)};
-  /* 目标页筛选行只认日期，改成 ±12 小时对应的日期区间 —— 控件显示与数据口径一致 */
-  Object.assign(pageFilters.switchHist,{machine:rec.machine,start:shFocusDate(from),end:shFocusDate(to)});
+  /* R163：目标页筛选行已升级为**时间**范围（与 ctx.shFocus 窗口同口径），
+     直接把 ±12 小时的起止时分带过去 —— 控件显示与数据口径完全一致（不再退化成整天）。 */
+  Object.assign(pageFilters.switchHist,{machine:rec.machine,start:orderFocusDT(from),end:orderFocusDT(to)});
   tablePaging.switchHist.page=1;
   /* 目标页是 abn 组第 3 个 tab（id='done'，htab='switch'）：必须先把 htab 拨到 switch，
      goPage('history') 才会经 mapSubToGroup 落到这个 tab，而不是第 2 个「已确认原因」。
@@ -8970,14 +8998,16 @@ function goVarietyMoldFromPop(orderNo,machine){
   closePop();
   openPossibleVarietyMold(orderNo,machine);
 }
-/* 查看更多：把窗口放大到「该主机全部切换记录」（该页数据只有 08-22~08-26） */
+/* 查看更多：把窗口放大到「该主机全部切换记录」（该页数据只有 08-22~08-26）
+   ⚠ R163：范围值口径升为「YYYY-MM-DD HH:MM」⇒ 这里用 orderFocusDT()（保留时分），
+     旧 shFocusDate() 只到日、会把首末两条记录所在的分钟截掉。 */
 function expandShFocus(){
   const f=ctx.shFocus; if(!f) return;
   const rows=SWITCH_HISTORY_DATA[f.machine]||[]; if(!rows.length) return;
   const ts=rows.map(r=>new Date(r.time.replace(' ','T')).getTime());
   f.expanded=true;
-  pageFilters.switchHist.start=shFocusDate(new Date(Math.min.apply(null,ts)));
-  pageFilters.switchHist.end=shFocusDate(new Date(Math.max.apply(null,ts)));
+  pageFilters.switchHist.start=orderFocusDT(new Date(Math.min.apply(null,ts)));
+  pageFilters.switchHist.end=orderFocusDT(new Date(Math.max.apply(null,ts)));
   renderGroup('abn');
   toast('已展开 '+f.machine+' 的全部切换记录');
 }
@@ -8985,8 +9015,8 @@ function expandShFocus(){
 function clearShFocus(){
   if(!ctx.shFocus) return;
   ctx.shFocus=null;
-  pageFilters.switchHist.start='2026-08-20';
-  pageFilters.switchHist.end='2026-08-26';
+  pageFilters.switchHist.start='2026-08-20 00:00';
+  pageFilters.switchHist.end='2026-08-26 23:59';
   tablePaging.switchHist.page=1;
   renderGroup('abn');
   toast('已退出可能品种/模具搜索');
@@ -10394,14 +10424,26 @@ function openReasonPicker(i){
     }
     /* R136（用户要求）：标题栏下方**另起一整行**恢复「i 业务解释」区 —— R123 曾整块删除，
        点/选一级、二级原因即时显示对应解释；长文案（一级最长 60 字）铺满面板宽度后不折行、不截断。 */
+    /* R163（用户要求 3.2）：「请点击左侧选择框或原因文字确认原因」只在**原因阶段**（一级 / 二级原因条目）显示；
+       换品种 / 换模具 的订单 / 模具选择阶段右侧是整卡选项（无勾选框、点卡片即选定），提示文案会指错对象 ⇒ 隐藏。 */
+    var showTip=!(stage==='lv2'&&(s.lv1==='换品种'||s.lv1==='换模具'));
     panel.innerHTML='<div class="rp-titlebar"><span class="rp-title">原因选择</span>'+
+      (showTip?'<span class="rp-tip">请点击左侧选择框或原因文字确认原因</span>':'')+
       '<span class="rp-cur">'+(curTxt?('当前：'+curTxt):'')+'</span>'+
       '<button class="rp-x" id="rpClose">×</button></div>'+rpExplainHtml(i)+body;
     /* R136：条目恢复**双热区**——右侧 `.rp-check` = 选定（`stopPropagation` 挡住预览），
-       其余空白处 = 「预览该原因的业务解释」（R87-2 原设计）。 */
+       其余空白处 = 「预览该原因的业务解释」（R87-2 原设计）。
+       R163（用户要求 3.1）：**原因文字本身上再开一个「选定」热区**（与勾选框等价），
+         文字右侧空白处仍归预览（3.3）—— 故 `.rp-txt` 自己吃掉点击并 `stopPropagation`。 */
     const rpBindItem=function(item,onPick,onPreview){
       const btn=item.querySelector('.rp-check');
       if(btn) btn.onclick=function(e){
+        e.stopPropagation();
+        if(item.dataset.disabled==='1') return;
+        onPick();
+      };
+      const txt=item.querySelector('.rp-txt');
+      if(txt) txt.onclick=function(e){
         e.stopPropagation();
         if(item.dataset.disabled==='1') return;
         onPick();
@@ -10895,7 +10937,7 @@ function rpExplainKeyHtml(i){
 function rpExplainInnerHtml(i){
   const t=rpExplainText(i);
   return t?('<span class="rp-ex-v" title="'+t+'">'+t+'</span>')
-          :'<span class="rp-ex-empty">点一下一级 / 二级原因，这里显示对应的业务解释</span>';
+          :'<span class="rp-ex-empty">点击原因文字的右侧空白处显示对应原因的业务解释</span>';
 }
 function rpExplainHtml(i){
   return '<div class="rp-explain">'+rpExplainKeyHtml(i)+rpExplainInnerHtml(i)+'</div>';
@@ -12599,7 +12641,7 @@ function order_render(){
       <!-- R162：两框选中后回显「订单号 / 名称」；内容超宽时由 bindFilterTextScroll() 统一接管为来回滚动
            （与全站筛选/搜索框同一套跑马灯：.dv 外层裁切 + .dv-mq 内层 transform 平移、约 26px/s、两端停顿），
            故这里不额外加滚动类/动画，别在 .order-product-search 上另起一套样式。 -->
-      <div class="f-input order-range" onclick="openOrderRangePicker()" title="${of.start} ～ ${of.end}"><span class="dv">◷ ${shortHistoryDateTime(of.start)}　-　${shortHistoryDateTime(of.end)}</span></div>
+      <div class="f-input order-range" onclick="openOrderRangePicker()" title="${of.start} ～ ${of.end}"><span class="dv">${shortHistoryDateTime(of.start)}　-　${shortHistoryDateTime(of.end)}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
     <div class="order-sub-toolbar"><button class="order-sound-btn" onclick="toast('异常提示声音已消除')">消除声音</button>
@@ -13720,7 +13762,7 @@ function resetSearch(){
   if(curPage==='pending') pageFilters.pending={team:'',reason:'',productQuery:'',productLabel:'',machines:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59'};
   if(curPage==='history'){
     pageFilters.history={teams:[],reasons:[],productQuery:'',productLabel:'',machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59',page:1,pageSize:12,tab:pageFilters.history.tab||'abnormal'};
-    pageFilters.switchHist={machine:'1#制粒',start:'2026-08-20',end:'2026-08-26',page:1,pageSize:10};
+    pageFilters.switchHist={machine:'1#制粒',start:'2026-08-20 00:00',end:'2026-08-26 23:59',page:1,pageSize:10};
     ctx.shFocus=null;
   }
   if(curPage==='loss') pageFilters.loss={sections:[],reason:'',machines:[],mode:'CURRENT_SHIFT',shifts:[],teams:[],start:'2026-08-23 00:00',end:'2026-08-25 23:59',chartTab:'TIME_EFF',drill:''},tablePaging.loss={page:1,pageSize:8};
@@ -14187,16 +14229,18 @@ function switchHist_render(){
   const sf=pageFilters.switchHist;
   const machine=sf.machine||'1#制粒';
   const data=SWITCH_HISTORY_DATA[machine]||[];
-  /* 筛选：时间段 */
+  /* 筛选：时间段（R163 起精确到分 —— 值可能是 YYYY-MM-DD HH:MM，也可能仍是纯日期，统一走 shRangeDT） */
   const filtered=data.filter(item=>{
     const d=new Date(item.time.replace(' ','T'));
-    const start=new Date(sf.start+'T00:00:00');
-    const end=new Date(sf.end+'T23:59:59');
-    if(d<start||d>end) return false;
+    const start=shRangeDT(sf.start,false);
+    const end=shRangeDT(sf.end,true);
+    if(start&&d<start) return false;
+    if(end&&d>end) return false;
     return true;
   });
   /* R85：带「来源订单 + 主机 + 前后 12 小时」窗口进来时，列表只保留落在窗口内的记录
-     （页面筛选只有日期粒度，精确到分钟的窗口在这里叠加；expanded=true 表示已点「查看全部时段」）。 */
+     （R163 起页面筛选本身已能表达分钟级窗口，但 ctx.shFocus 窗口仍是「展开/退出搜索」的语义来源；
+      expanded=true 表示已点「查看全部时段」）。 */
   const foc=(ctx.shFocus&&ctx.shFocus.machine===machine)?ctx.shFocus:null;
   const inWindow=item=>{
     if(!foc||foc.expanded) return true;
@@ -14420,7 +14464,8 @@ function switchHist_render(){
     return `<button class="process-machine-tab machine-${st} ${machine===m?'on':''}" onclick="setSwitchHistMachine('${m}')">${m}</button>`;
   }).join('');
 
-  const dateText=shortShiftDate(sf.start)+' - '+shortShiftDate(sf.end);
+  /* R163：筛选值已精确到分 ⇒ 文案与待确认原因页同口径（08/20 00:00 ～ 08/26 23:59） */
+  const dateText=shortHistoryDateTime(sf.start)+' ～ '+shortHistoryDateTime(sf.end);
 
   return {title:'', html:
     `<div class="switch-hist-page">
@@ -14428,7 +14473,9 @@ function switchHist_render(){
       <div class="card compact-filter-card sh-filter-card">
         <div class="sh-filter-row sh-filter-row-top">
           <div class="process-machine-tabs sh-machine-tabs">${machineTabs}</div>
-          <div class="f-input trend-range sh-date-input" onclick="openSwitchHistDateRange()"><span class="dv">▣ ${dateText}</span></div>
+          <!-- R163（用户要求 2）：班次时间范围 chip 与「待确认原因」页同款 ——
+               去掉 ▣ 图标前缀、文案改「MM/DD HH:MM ～ MM/DD HH:MM」、右侧补 ▾ 展开指示。 -->
+          <div class="f-input trend-range sh-date-input" onclick="openSwitchHistDateRange()"><span class="dv">${dateText}</span><span class="arrow">▾</span></div>
           <!-- R90：原「本窗 N 次切换」统计文字 → 核查提示（品种错漏 / 生产时间准确性；问题回「已确认原因」页修改）
                ⚠⚠ R143（用户要求 2.3）文案整体替换：
                  旧「重点核查品种有无缺料、生产时间是否准确(有问题在已确认原因调整)」
@@ -14457,27 +14504,26 @@ function setSwitchHistMachine(m){
   tablePaging.switchHist.page=1;
   goPage('history');
 }
+/* R163（用户要求 2）：本弹窗改为与「待确认原因」页 `openPendingRangePicker()` **完全同款** ——
+   同一个 `openDateTimePicker`（日期 + 时分）、同一套「开始时间 / 结束时间」标签、同样的确认口径。
+   ⚠ 原来走 `openDatePicker`（仅日期），选完时分无从体现，两个页面的时间选择器行为不一致。 */
 function openSwitchHistDateRange(){
   const sf=pageFilters.switchHist;
-  openPop(`<button class="close" onclick="closePop()">×</button><h3>选择班次日期范围</h3>
-    <div class="shift-range-fields"><div><label>开始日期</label><div class="f-input" id="shRangeStart" onclick="openDatePicker(this)"><span class="dv">${sf.start}</span><span class="arrow">▾</span></div></div>
-    <div><label>结束日期</label><div class="f-input" id="shRangeEnd" onclick="openDatePicker(this)"><span class="dv">${sf.end}</span><span class="arrow">▾</span></div></div></div>
-    <div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="applySwitchHistRange()">确认</button></div>`);
-  document.getElementById('shRangeStart')._dtValue={y:parseInt(sf.start.slice(0,4)),m:parseInt(sf.start.slice(5,7))-1,d:parseInt(sf.start.slice(8,10)),hh:0,mm:0};
-  document.getElementById('shRangeEnd')._dtValue={y:parseInt(sf.end.slice(0,4)),m:parseInt(sf.end.slice(5,7))-1,d:parseInt(sf.end.slice(8,10)),hh:0,mm:0};
+  openPop(`<button class="close" onclick="closePop()">×</button><h3>选择班次时间范围</h3><div class="shift-range-fields"><div><label>开始时间</label><div class="f-input" id="shRangeStart" onclick="openDateTimePicker(this)"><span class="dv">${sf.start}</span><span class="arrow">▾</span></div></div><div><label>结束时间</label><div class="f-input" id="shRangeEnd" onclick="openDateTimePicker(this)"><span class="dv">${sf.end}</span><span class="arrow">▾</span></div></div></div><div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="applySwitchHistRange()">确认</button></div>`);
+  document.getElementById('shRangeStart')._dtValue=shiftTextToDT(sf.start);
+  document.getElementById('shRangeEnd')._dtValue=shiftTextToDT(sf.end);
 }
 function applySwitchHistRange(){
-  const s=document.getElementById('shRangeStart')._dtValue;
-  const e=document.getElementById('shRangeEnd')._dtValue;
-  if(!s||!e){toast('请选择完整的日期范围');return;}
-  const fmt=v=>`${v.y}-${String(v.m+1).padStart(2,'0')}-${String(v.d).padStart(2,'0')}`;
-  if(fmt(s)>=fmt(e)){toast('结束日期必须晚于开始日期');return;}
-  pageFilters.switchHist.start=fmt(s);
-  pageFilters.switchHist.end=fmt(e);
+  const start=(document.querySelector('#shRangeStart .dv').textContent||'').trim();
+  const end=(document.querySelector('#shRangeEnd .dv').textContent||'').trim();
+  if(!start||!end){toast('请选择完整的时间范围');return;}
+  if(new Date(start.replace(' ','T'))>=new Date(end.replace(' ','T'))){toast('结束时间必须晚于开始时间');return;}
+  pageFilters.switchHist.start=start;
+  pageFilters.switchHist.end=end;
   tablePaging.switchHist.page=1;
-  /* R85：手动改日期范围 = 放弃这次搜索的 ±12 小时窗口 */
+  /* R85：手动改时间范围 = 放弃这次搜索的 ±12 小时窗口 */
   ctx.shFocus=null;
-  closePop();goPage('history');toast('日期范围已更新');
+  closePop();goPage('history');toast('班次时间范围已更新');
 }
 function toggleSemiPanel(el){
   el.classList.toggle('expanded');
