@@ -1136,10 +1136,6 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .reason-picker.rp-modal.rp-open{opacity:1; transform:scale(1);}
 /* 抽屉右列：换品种 / 换模具 的品种、模具选择（内嵌，不另开弹窗） */
 .reason-picker .rp-col-pick{display:flex; flex-direction:column; gap:8px; padding:8px 10px; overflow:hidden;}
-.reason-picker .rp-pick-search{flex-shrink:0;}
-.reason-picker .rp-pick-search input{width:100%; height:42px; box-sizing:border-box; border:1.5px solid var(--border);
-  border-radius:12px; padding:0 10px; font-size:15px; color:var(--t1); background:#fff; outline:none;}
-.reason-picker .rp-pick-search input:focus{border-color:var(--blue); box-shadow:0 0 0 3px rgba(8,114,201,.15);}
 .reason-picker .rp-pick-steps{display:flex; align-items:center; gap:8px; flex-shrink:0;}
 .reason-picker .rp-pick-step{display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px;
   border-radius:16px; background:#EDF0F4; color:var(--t2); font-size:15px; font-weight:600;}
@@ -4312,6 +4308,86 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 </div></div>
 
 <script>
+/* ============================================================================
+ *  OEE 触屏端原型 —— 全局架构说明（核心代码导航地图）
+ * ============================================================================
+ *  一、系统定位
+ *  ---------------------------------------------------------------------------
+ *  - 面向车间触摸大屏（1280×1024）的单页原型，零运行时依赖、零构建步骤。
+ *  - 整站只有本文件一个 index.html：HTML 模板 + 内联 CSS（<style>）+ 内联 JS
+ *    （本 <script>）+ 内联 MOCK 数据，全部打包进一份文件即可双击运行或在
+ *    GitHub Pages 直接托管（见 deploy/ 目录的发布流水线）。
+ *  - 配套资源：guide-video.mp4（操作视频，由 VIDEO_GUIDE_SRC 引用，部署时内联
+ *    进 selfcontained 副本以便离线打开）。
+ *
+ *  二、渲染与导航范式（最重要，务必先理解）
+ *  ---------------------------------------------------------------------------
+ *  - 整页采用「innerHTML 全量重渲染」：每次切页/改筛选都重新生成整段 HTML 并
+ *    写回 #content（见 render / renderGroup）。没有虚拟 DOM、没有 diff，逻辑
+ *    简单可预测，代价是每次重渲染后都要重绑事件（因此在 render 末尾统一调用
+ *    bindTableSorting / bindFilterTextScroll / mountFullscreenExit 等后处理）。
+ *  - 侧栏一级菜单 = 分组（GROUPS），组内多个 tab。goPage(p) / render(p) 既能
+ *    收 page key（如 'pending'），也能收分组 key（如 'abn'）。mapSubToGroup(p)
+ *    负责把"page key"映射到"所属分组 + 当前 tab"——这是分组/页签两套概念的解耦点。
+ *  - 显式切 tab 的唯一入口是 setGroupTab(gk,tabId)；程序化跳转（保留 tab 态）走
+ *    render / goPage。setGroupTab 会清掉 orderFocus / shFocus 等"定位态"。
+ *  - 全屏态、自动刷新（AUTO_REFRESH）、异常诊断全屏等"跨页副作用"都在 render /
+ *    renderGroup 里集中收口，避免散落各页面函数。
+ *
+ *  三、关键全局状态（都在本 <script> 顶部附近，改前务必先读）
+ *  ---------------------------------------------------------------------------
+ *  - GROUPS / groupState / TAB_BADGES：分组与 tab 定义、默认 tab、tab 角标来源。
+ *  - pages：page key → 页面渲染函数 的映射表（render 通过它取页面 HTML）。
+ *  - pageFilters：各页筛选条件（机器/班组/时间/搜索词…），重置走 resetSearch。
+ *  - tablePaging：各页翻页状态（page / pageSize）。
+ *  - ctx：登录态、当前选中机器、自动刷新/定位等运行期状态。
+ *  - MOCK 数据：SWITCH_HISTORY_DATA（切换/换模历史，品种·模具历史页权威源）、
+ *    ORDER_EXECUTION_DATA（异常核对权威源）、pendingList / reasonStore 等。
+ *
+ *  四、通用交互组件（全站复用，别在各页面重复造轮子）
+ *  ---------------------------------------------------------------------------
+ *  - openDropdown：下拉/多选筛选面板（带搜索），openPageMultiFilter 是其封装。
+ *  - openDateTimePicker：日期时间选择器，openDatePicker 仅日期模式。
+ *  - openPop / closePop：底部或居中弹层容器；弹层底部操作条用 .pop-actions
+ *    （sticky 贴底，详见 CSS 注释，新增弹层别漏加白名单）。
+ *
+ *  五、颜色与设计 token
+ *  ---------------------------------------------------------------------------
+ *  - 状态色统一走 CSS 变量：--blue / --green / --orange / --red。
+ *  - 异常判定四态（红/黄/灰/未知）全站唯一口径 = prodOrderAbnState /
+ *    prodPairAbnState（见异常核对相关函数），任何页面染色都必须走它，禁止再写
+ *    第二套口径（历史坑见相关函数注释）。
+ *
+ *  六、开发约定与回归
+ *  ---------------------------------------------------------------------------
+ *  - 行内注释沿用 ☠（致命坑）/ ⚠（注意）/ Rxxx（需求轮次）标记体系，保留即保留
+ *    了踩坑记录，请勿随意删除。
+ *  - 改完须过 验证脚本/oee_syntax_check.cjs（语法自检），行为类改动须跑全量回归
+ *    （验证脚本/oee_regress.sh）。模板字符串里**禁止出现反引号**（会破坏整段）。
+ *  - 发布：deploy/publish_github.sh 一键同步双副本并推送 GitHub Pages。
+ *
+ *  七、模块索引（按行号，代表性锚点；函数众多，仅列主干）
+ *  ---------------------------------------------------------------------------
+ *   4316  fit()                        自适应缩放，精确还原 1280×1024
+ *   4399  pageFilters / 4418 tablePaging / ctx   全局筛选·分页·运行态
+ *   5002  openDropdown()               通用下拉/多选面板（带搜索）
+ *   5198  openDateTimePicker()         日期时间选择器
+ *   5432  openPop() / closePop()       弹层容器（底部/居中）
+ *   7856  GROUPS / groupState          侧栏分组与 tab 定义、默认 tab
+ *   7897  pages                        页面 key → 渲染函数 映射
+ *   7910  orderRowAbnState()           异常判定链（红/黄/灰四态，全站唯一口径）
+ *   9388  pendingList / reasonStore    待确认原因队列与原因维护存储
+ *   9346  goPage()                     切页入口（关浮层→映射分组→render）
+ *  13888  mapSubToGroup()              page key → 分组+tab 映射（解耦点）
+ *  13914  render()                     整页 innerHTML 重渲染（核心引擎）
+ *  13937  renderGroup()                分组页：tab 条 + 当前 tab 内容
+ *  13991  setGroupTab()                显式切 tab 唯一入口（清定位态）
+ *  14001  resetSearch()                重置当前页全部筛选条件
+ *  14026  SWITCH_HISTORY_DATA          切换/换模历史（品种·模具历史页权威源）
+ *  （其余各页：pending/history/shift/process/loss/trend/team/order/progress/
+ *   ringmold/moldhist/moldinfo/ops/andon 等，均以 *_render / *_page 函数承载）
+ * ============================================================================ */
+
 /* ============ 自适应缩放：精确还原 1280x1024 ============ */
 function fit(){
   const s=Math.min(window.innerWidth/1280, window.innerHeight/1024);
@@ -8612,6 +8688,16 @@ function moldCodeSide(code,side){
   if(parts.length<2) return parts[0]||'';
   return side==='before'?parts[0]:parts[parts.length-1];
 }
+/* ============ R172 · 当前记录所用模具的「实时推算」（不落库，每次现算） ============
+ * 为什么现算而不用 p.currentMold：换模信息可能由系统后补（停机时录入的新模具），
+ *   后补后若写回 p.currentMold 就得再触发一次重渲染；现算 ⇒ 系统补了数据下次打开自动生效。
+ * 推算优先级（自上而下，命中最先满足者即返回）：
+ *   ① 本条记录自身 moldCode 的「切换后」半段（moldCode 形如 "PH-E25-20-01 → PH-E25-20-02"，
+ *      全角 → 取右边）—— 即本次换模录进去的新模具；
+ *   ② 该主机在 downStart 之前（含同时刻）最近一条切换记录的「切换后」模具；
+ *   ③ 早于全部记录（没有任何切换记录早于本停机）⇒ 取最早那条切换记录的「切换前」模具；
+ *   ④ 该机毫无切换数据 ⇒ 退回快照 p.currentMold，仍空则回 '—'。
+ * ⚠ 注意 ② vs ③ 的边界：用 `<=` 把"同时刻"算进 ②，只有"完全早于首条"才落 ③。 */
 function curMoldOfRecord(p){
   if(!p) return '—';
   const own=moldCodeSide(p.moldCode,'after');
@@ -10249,9 +10335,6 @@ function matchMold(m,q){
   if(!q) return true;
   return [m.code,m.holeDia,m.ratio,m.rows,m.cols,m.holes,m.pitch,m.boost,m.relief,m.openRate,m.onMachine]
     .filter(Boolean).join(' ').toLowerCase().indexOf(q)>=0;
-}
-function rpPickSearchHtml(ph){
-  return '<div class="rp-pick-search"><input type="text" placeholder="'+ph+'"></div>';
 }
 function rpPickStepBar(step){
   return '<div class="rp-pick-steps">'+
@@ -13885,6 +13968,27 @@ const FILL_TABLE_PAGES=['pending','history','shift','trend','loss','team','order
      若不做这个守卫，render('ringmold') 会先把 p 映射成「本组第 1 个 tab」并把 groupState.ringmold
      冲回 'ringmold' —— 表现为「点第二个 tab 或 goPage('moldhist') 总是弹回模具推荐」。
      分组名交给 render/renderGroup 用 groupState 处理即可。 */
+/* ============================================================================
+ *  核心导航 / 渲染引擎总览
+ *  ----------------------------------------------------------------------------
+ *  这一组函数构成整站的"路由 + 视图"骨架，所有页面切换最终都汇聚到这里：
+ *
+ *   用户点击 / onclick
+ *      └─ goPage(p)            切页入口：先收尾旧浮层/选择器，再映射分组、render
+ *           └─ mapSubToGroup(p) 把 page key 解析成 {分组 gk, tabId}（或 null=已是分组/tab）
+ *                ├─ 命中分组 → 写 groupState + curNav，render(gk) ─┐
+ *                └─ 已是分组/tab → render(p)                      │
+ *                                                          ↓（两者殊途同归）
+ *           render(p)            普通页：pages[p]() 取 HTML，innerHTML 重渲染
+ *           renderGroup(gk)      分组页：先画 tab 条，再 pages[tab.key]() 取内容
+ *
+ *  - curNav        ：当前侧栏分组（高亮用）
+ *  - curPage       ：当前实际 page key（= 当前 tab 的 key）
+ *  - groupState[gk]：各分组"当前停留 tab"，点侧栏回默认、显式切 tab 才改
+ *  - 全屏/自动刷新/诊断全屏等跨页副作用在 render/renderGroup 内统一收口
+ *  - 显式切 tab 只走 setGroupTab（会清 orderFocus/shFocus 定位态）；程序内跳转
+ *    走 goPage/render（保留定位态），二者不可混用
+ * ============================================================================ */
 function mapSubToGroup(p){
   if(GROUPS[p]) return null;
   for(const gk in GROUPS){
