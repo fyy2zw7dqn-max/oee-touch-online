@@ -6763,7 +6763,18 @@ try{const raw=localStorage.getItem(RM_KEY);if(raw){const p=JSON.parse(raw);if(p&
 rmState.rows=rmState.rows||{};rmState.cleared=rmState.cleared||[];
 function rmSave(){try{localStorage.setItem(RM_KEY,JSON.stringify(rmState));}catch(e){}}
 window.RingMoldPanel.state=rmState;
-const rmCtx={tab:'ongoing',query:'',start:'',end:'',collapsed:{},hostSel:{},alert:true,rowsHidden:true,showDoneRows:{}};
+/* R169：配料开始时间筛选默认 = 最近两天（昨天 00:00 ～ 今天 23:59）。
+   「今天」取页面基准 RM_NOW（与「清除 2 天前」「最近 2 小时配料」同口径；mock 基准 = 2026-08-31），
+   即默认 08-30 00:00 ～ 08-31 23:59 —— 打开模具推荐即只看最近两天的推荐。
+   rmCtx 是内存态（不落 localStorage）⇒ 刷新回到该默认；弹窗里「不限时间」仍可清空为全量。 */
+function rmDefaultRange(){
+  var p=function(n){return String(n).padStart(2,'0');};
+  var yest=new Date(RM_NOW.getFullYear(),RM_NOW.getMonth(),RM_NOW.getDate()-1);
+  return {start:yest.getFullYear()+'-'+p(yest.getMonth()+1)+'-'+p(yest.getDate())+' 00:00',
+          end:RM_NOW.getFullYear()+'-'+p(RM_NOW.getMonth()+1)+'-'+p(RM_NOW.getDate())+' 23:59'};
+}
+var _rmDefRange=rmDefaultRange();
+const rmCtx={tab:'ongoing',query:'',start:_rmDefRange.start,end:_rmDefRange.end,collapsed:{},hostSel:{},alert:true,rowsHidden:true,showDoneRows:{}};
 function rmRowKey(id,machine,size){return id+'|'+machine+'|'+size;}
 function rmRowDone(id,machine,size){return !!rmState.rows[rmRowKey(id,machine,size)];}
 /* 卡片完成 = 所有可能主机的全部粒径行完成 */
