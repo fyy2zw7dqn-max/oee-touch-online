@@ -1626,6 +1626,10 @@ svg text.team-metric-link:hover{fill:#0066CC;}
    高度/字号保持 28px/13px —— 与本行左侧 28px 的主机 tab 同高，不把筛选行撑高。 */
 .sh-date-input{height:28px; min-width:0; flex-shrink:0; white-space:nowrap; padding:0 10px!important; border-radius:6px!important; border-width:1px!important;}
 .sh-date-input .dv{font-size:13px!important;}
+/* R177：品种/模具历史筛选行「重置」按钮 —— 与本行 28px 主机 tab / 时间框同高同字号，避免标准 .btn-sm(56px) 把紧凑行撑高 */
+.sh-reset-btn{height:28px; padding:0 14px; border-radius:5px; font-size:13px; font-weight:600; flex:0 0 auto;
+  background:transparent; border:1px solid var(--border); color:var(--t2); cursor:pointer; white-space:nowrap;}
+.sh-reset-btn:active{background:rgba(0,0,0,.04);}
 /* R90：原「本窗 N 次切换」统计文字已替换为核查提示。
    ⚠ 提示文案较长（~30 字）⇒ 不再 flex-shrink:0，允许收缩 + 单行省略，
      保证不把左侧主机 chips / 日期输入（均 flex-shrink:0）挤下行。 */
@@ -9219,6 +9223,18 @@ function clearShFocus(){
   renderGroup('abn');
   toast('已退出可能品种/模具搜索');
 }
+/* R177：品种/模具历史页筛选行「重置」—— 复位时间范围与定位窗口，**保留当前所选主机 tab**
+   （机器 tab 是导航而非筛选条件，重置筛选项不应把用户从当前机器上弹走）。shFocus 一并清除，
+   与 clearShFocus 同口径，避免「退出搜索态」残留。 */
+function resetSwitchHistFilter(){
+  if(_activeDropdown&&_activeDropdown._requireDone)closeDropdown(true);
+  pageFilters.switchHist.start='2026-08-20 00:00';
+  pageFilters.switchHist.end='2026-08-26 23:59';
+  pageFilters.switchHist.page=1;
+  ctx.shFocus=null;
+  renderGroup('abn');
+  toast('已重置筛选条件');
+}
 /* 搜索结果提示条（复用 R83 定位条外观）：来源订单 / 携带的主机与时间窗口 / 本窗条数 / 操作。
    ⚠ R94 起本条改为**两行**：标题里要放「成品订单 / 成品名称」，名称动辄 20+ 字，
      单行必然把右侧的「查看全部时段 / 退出搜索」挤出可视区（.order-focus-bar 是 overflow:hidden）。
@@ -14702,6 +14718,8 @@ function switchHist_render(){
           <!-- R163（用户要求 2）：班次时间范围 chip 与「待确认原因」页同款 ——
                去掉 ▣ 图标前缀、文案改「MM/DD HH:MM ～ MM/DD HH:MM」、右侧补 ▾ 展开指示。 -->
           <div class="f-input trend-range sh-date-input" onclick="openSwitchHistDateRange()"><span class="dv">${dateText}</span><span class="arrow">▾</span></div>
+          <!-- R177：时间筛选框后增加「重置」按钮（复位时间范围 + 定位窗口，保留所选主机 tab） -->
+          <button class="sh-reset-btn" onclick="resetSwitchHistFilter()">重置</button>
           <!-- R90：原「本窗 N 次切换」统计文字 → 核查提示（品种错漏 / 生产时间准确性；问题回「已确认原因」页修改）
                ⚠⚠ R143（用户要求 2.3）文案整体替换：
                  旧「重点核查品种有无缺料、生产时间是否准确(有问题在已确认原因调整)」
