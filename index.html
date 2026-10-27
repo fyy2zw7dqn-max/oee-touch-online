@@ -3125,7 +3125,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .history-filter .f-input{height:44px!important;padding:0 12px!important;font-size:16px!important;}
 .history-filter .history-machine-filter,.history-filter .history-reason-filter{width:180px;flex:0 0 180px;}
 .history-filter #histTeam{width:120px;flex:0 0 120px;}
-.history-filter>div:nth-child(4){width:215px;flex:0 1 215px;}
+.history-filter .history-range{width:215px;flex:0 1 215px;}
 .history-filter .history-product-search{min-width:210px;flex:1 1 250px;}
 .history-filter .btn{width:64px;min-width:64px;flex:0 0 64px;height:44px!important;padding:0 10px!important;font-size:16px!important;}
 
@@ -4085,7 +4085,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
    ☠ 别再给这些框写回固定宽度：宽度一旦大于内容，并排时会白占空间、把右侧「重置/补录/视频讲解」挤出可视区。 */
 .pending-filter-card .history-range-only,
 .pending-single-filter-card .history-range-only,
-.history-filter>div:nth-child(4),
+.history-filter .history-range,
 .order-filter-row .order-range,
 .process-range,
 .trend-filter-row .trend-range,
@@ -4107,6 +4107,23 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
    ☠ min-width:230 是保底（= 改前宽度），仅在极端拥挤时生效；真触发说明该行又加了新控件，须重新算预算。 */
 .order-filter-row .order-machine-filter{width:180px!important;flex:0 0 180px!important;min-width:180px!important;}
 .order-filter-row .order-product-search{width:auto!important;flex:1 1 0!important;min-width:230px!important;}
+/* ============ R176 · 全局：下拉筛选条件文字 = tab 标题(20px) 小 1 号 = 18px ============
+   用户（2026-10-27，附截图）：「全局修改：全部下拉筛选条件文字大小修改为较tab标题文字小1号」，
+   经确认目标字号 = 18px（tab 标题 .grp-tab 为 20px）。
+   覆盖范围 = 各页筛选行/筛选卡里的条件框文字 + 下拉展开后的选项行（.dropdown-item 原 21px，比 tab 还大）。
+   ☠ 必须连 .f-input .dv 一起写：行 3133 把 `.page-filter-row .dv` 直接钉在 16px !important，
+     只改 .f-input 时 .dv 仍被那条命中，字号不会变。
+   ☠ 表单类 .f-input（andon 报障 17px / ar-custom-row 17px / mold-profile 信息卡编辑框）不是筛选条件，不动。 */
+.page-filter-row .f-input,.page-filter-row .f-input .dv,
+.history-filter .f-input,.history-filter .f-input .dv,
+.legacy-page .f-input,.legacy-page .f-input .dv,
+.sh-hist-filter .f-input,.sh-hist-filter .f-input .dv,
+.sh-filter-row .f-input,.sh-filter-row .f-input .dv,
+.loss-period-card .f-input,.loss-period-card .f-input .dv,
+.msg-filter-card .f-input,.msg-filter-card .f-input .dv,
+.mold-bind-filters .f-input,.mold-bind-filters .f-input .dv,
+.mold-bind-query .f-input,.mold-bind-query .f-input .dv,
+.dropdown-panel .dropdown-item{font-size:18px!important;}
 </style>
 <style id="__dm_no_drag_style__">* { -webkit-user-drag: none !important; }</style><style id="__dm_bindable_badge_style__">[data-sp-bindable="database"]{outline:1px dashed #0088ff;outline-offset:2px;border-radius:4px;}[data-sp-bindable="database"] *{pointer-events:none !important;transition:none !important;animation:none !important;}[data-sp-bindable="database"]{transition:none !important;animation:none !important;}
 </style></head>
@@ -11466,9 +11483,9 @@ function history_render(){
   return {title:'',
     html:`<div class="legacy-page table-fill-page"><div class="card compact-filter-card pending-filter-card history-filter-card"><div class="filter-row page-filter-row history-filter">
         <div class="f-input multi-filter history-machine-filter ${hf.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,machineDropdownOptions(),pageFilters.history.machines,pickPageFilter('history','machines'))"><span class="dv">${multiFilterText(hf.machines,'全部机器')}</span><span class="arrow">▾</span></div>
+        <div class="f-input history-range" onclick="openHistoryRangePicker()"><span class="dv">${shortHistoryDateTime(hf.start)} ～ ${shortHistoryDateTime(hf.end)}</span><span class="arrow">▾</span></div>
         <div class="f-input multi-filter ${hf.teams.length?'has-value':''}" id="histTeam" data-all-text="全部班组" onclick="openPageMultiFilter(this,teamDropdownOptions(),pageFilters.history.teams,pickPageFilter('history','teams'))"><span class="dv">${multiFilterText(hf.teams,'全部班组')}</span><span class="arrow">▾</span></div>
         <div class="f-input multi-filter history-reason-filter ${hf.reasons.length?'has-value':''}" data-all-text="全部原因" onclick="openPageMultiFilter(this,reasonDropdownOptions(),pageFilters.history.reasons,pickPageFilter('history','reasons'))"><span class="dv">${multiFilterText(hf.reasons,'全部原因')}</span><span class="arrow">▾</span></div>
-        <div class="f-input" onclick="openHistoryRangePicker()"><span class="dv">${shortHistoryDateTime(hf.start)} ～ ${shortHistoryDateTime(hf.end)}</span><span class="arrow">▾</span></div>
         <div class="f-input history-product-search ${hf.productQuery?'':'placeholder'}" id="histProduct" onclick="openHistoryProductSearch()" title="${hf.productLabel||hf.productQuery||'搜索成品订单或成品名称'}"><span class="dv">${hf.productLabel||hf.productQuery||'搜索成品订单或成品名称'}</span></div>
         <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
@@ -12834,12 +12851,12 @@ function order_render(){
     ${orderFocusBarHtml()}
     <div class="card compact-filter-card order-filter-card"><div class="filter-row page-filter-row order-filter-row">
       <div class="f-input multi-filter order-machine-filter ${of.machines.length?'has-value':''}" data-all-text="全部机器" onclick="openPageMultiFilter(this,orderMachineOptions(),pageFilters.order.machines,pickPageFilter('order','machines'))"><span class="dv">${multiFilterText(of.machines,'全部机器')}</span><span class="arrow">▾</span></div>
+      <div class="f-input order-range" onclick="openOrderRangePicker()" title="${of.start} ～ ${of.end}"><span class="dv">${shortHistoryDateTime(of.start)}　-　${shortHistoryDateTime(of.end)}</span></div>
       <div class="f-input history-product-search order-product-search ${of.semiQuery?'':'placeholder'}" id="orderSemiSearch" onclick="openOrderSemiSearch()" title="${of.semiLabel||of.semiQuery||'半成品订单或名称'}"><span class="dv">${of.semiLabel||of.semiQuery||'半成品订单或名称'}</span></div>
       <div class="f-input history-product-search order-product-search ${of.productQuery?'':'placeholder'}" id="orderProductSearch" onclick="openOrderProductSearch()" title="${of.productLabel||of.productQuery||'成品订单或名称'}"><span class="dv">${of.productLabel||of.productQuery||'成品订单或名称'}</span></div>
       <!-- R162：两框选中后回显「订单号 / 名称」；内容超宽时由 bindFilterTextScroll() 统一接管为来回滚动
            （与全站筛选/搜索框同一套跑马灯：.dv 外层裁切 + .dv-mq 内层 transform 平移、约 26px/s、两端停顿），
            故这里不额外加滚动类/动画，别在 .order-product-search 上另起一套样式。 -->
-      <div class="f-input order-range" onclick="openOrderRangePicker()" title="${of.start} ～ ${of.end}"><span class="dv">${shortHistoryDateTime(of.start)}　-　${shortHistoryDateTime(of.end)}</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
     <div class="order-sub-toolbar"><button class="order-sound-btn" onclick="toast('异常提示声音已消除')">消除声音</button>
