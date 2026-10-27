@@ -145,7 +145,7 @@ button{font-family:inherit; cursor:pointer; border:none; outline:none;}
 /* ---- 运维指引页 ---- */
 /* 运维/更新消息：白色背景 tab 页（下划线式，与 hist-tabs 风格一致） */
 .ops-tabs{display:flex;gap:0;margin:0 0 10px;background:#fff;border-radius:12px 12px 0 0;border-bottom:2px solid var(--border);padding:0 6px;}
-.ops-tabs .ops-tab{position:relative;height:48px;padding:0 24px;border:none;border-radius:0;background:transparent;font-size:17px;font-weight:500;color:var(--t2);cursor:pointer;}
+.ops-tabs .ops-tab{position:relative;height:48px;padding:0 24px;border:none;border-radius:0;background:transparent;font-size:20px;font-weight:600;color:var(--t2);cursor:pointer;}
 .ops-tabs .ops-tab.on{background:transparent;color:var(--blue);}
 .ops-tabs .ops-tab.on::after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--blue);border-radius:3px 3px 0 0;}
 .ops-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;}
@@ -1603,11 +1603,7 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 /* 超微粉碎机：主机电流 / 喂料频率 / 分级轮频率 三项指标，压缩间距保证一行放得下 */
 .mh-metrics-3{gap:14px;}
 /* 异常历史 / 切换历史 tab 切换 */
-.hist-tabs{display:flex; gap:0; margin-bottom:10px; border-bottom:2px solid var(--border);}
-.hist-tab{height:44px; padding:0 24px; background:transparent; border:none; font-size:17px;
-  font-weight:600; color:var(--t2); cursor:pointer; position:relative; bottom:-2px;}
-.hist-tab.on{color:var(--blue);}
-.hist-tab.on::after{content:''; position:absolute; left:0; right:0; bottom:-2px; height:3px; background:var(--blue); border-radius:3px 3px 0 0;}
+/* R179：.hist-tabs/.hist-tab 已无 JS 实例化（历史页「已确认原因/品种模具历史」切换改由顶部 .grp-tab 的 htab 承担），原死规则清理。 */
 /* 切换历史页面 */
 .switch-hist-page{display:flex; flex-direction:column; gap:10px; height:100%; overflow:hidden;}
 .sh-filter-card{padding:8px 12px!important; flex-shrink:0;}
