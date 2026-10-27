@@ -1044,6 +1044,8 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .reason-picker{display:flex; flex-direction:column; padding:0; overflow:hidden; border-radius:22px; box-shadow:0 16px 48px rgba(0,0,0,.22); border:2.5px solid rgba(8,114,201,.35);}
 .reason-picker .rp-titlebar{display:flex; align-items:center; gap:10px; padding:8px 16px; background:#fff; border-bottom:1.5px solid rgba(8,114,201,.35); flex-shrink:0;}
 .reason-picker .rp-title{font-size:22px; font-weight:700; color:var(--t1); flex-shrink:0;}
+/* R170：多段原因时标题后的「第 N 段」说明（单段不渲染；蓝色浅底圆角块，与标题区分层级） */
+.reason-picker .rp-segno{font-size:16px; font-weight:700; color:var(--blue); background:var(--blue-light,#EAF3FE); border:1.5px solid rgba(8,114,201,.28); border-radius:8px; padding:2px 10px; flex-shrink:0; line-height:1.35;}
 /* R163（用户要求 3.2）：标题「原因选择」右侧常驻操作提示（勾选框 / 原因文字 = 确认原因）。
    灰色 15px、单行不折行；「当前：…」（.rp-cur）改 `margin-left:auto` 贴右，
    两者不再抢同一段空白（否则 17 字提示与「当前：一级 / 待选二级」会挤在一起）。
@@ -10460,21 +10462,30 @@ function openReasonPicker(i){
   const centerReasonPanel=function(){
     const h=panel.offsetHeight;
     let top=Math.max(16, Math.floor((appRect.height-h)/2));
-    /* ============ R159 + R166 · 居中位置不得压住「第 N 段（末段）」等文字 ============
+    /* ============ R159 + R166 + R170 · 顶边紧靠「被点击那一段」的原因框 ============
        R159 用户原话：「原因选择弹窗位置下移一点，不能遮挡第 1 段（末段）等文字（刚好不遮住即可）」。
-       病根：面板按 app **上下居中**，而来源弹窗 `.pop.reason-pop` 是 `top:96/bottom:0` 的铺满式，
-       它的分段行恰好长在居中跨度**偏上**的位置 —— 实测 picker y283~741 vs「第 1 段（末段）」y285~309。
-       ✅ 做法：与任一分段行（`.seg-row1`）相交 ⇒ 顶边落到「**最后一条**分段行底边 **− 4**」；
-         多段时同样只落一次（贴末段下方，不会盖住前面已确认的段）。
-       R166 用户看图后的追加要求：「弹窗顶边再上移 12px，与附图一致」⇒ 偏移由 `+8` 改成 `−4`
-         （实测待确认页：分段行底 309 ⇒ 顶边 317 → **305**，刚好压住分段卡下沿 6px、不压文字）。
-       ☠ 别改回「固定下移 N px」—— 分段行数 / 折叠态会变，只有按实测几何让位才是「刚好不遮住」。
-       ☠ 位置只在首帧算一次（R116 起 `_sized` 锁定，防面板跳动），所以这里算完即终值。
-       ☠ 因为 −4 是**故意**让顶边略高于分段行底边，检测循环不能再拿「top<rr.bottom 就算相交」反复下推
-         （否则自己把自己往下顶、12 次 guard 全部命中）⇒ 只判一次相交、直接落值。 */
+       R166 用户看图后要求：「弹窗顶边再上移 12px，与附图一致」⇒ 落点定为「分段行底 − 4」
+         （实测单段：段底 309 ⇒ 顶边 305，而该段原因框是 315~357 ⇒ 等价于「框顶 − 10」）。
+       R170 用户原话：「点击图示位置，原因选择弹窗没有紧靠对应红色框位置，请全局修改保持一致」
+         ⇒ 病根：R166 一律按**末段**分段行算，点第 1 段（框 331~373）时弹窗跑到末段行底 439−4=435，
+           离点击的框隔了 62px（落在第 2 段上）。改为以**被点击的原因框**（`el` = #segLv1_i / #segLv2Btn_i）
+           为锚点：top = 框顶 − 10 —— 弹窗就出现在你点的那个框上，不再串到别的段。
+         · 单段：框顶 315 ⇒ **305**（与 R166 已确认位置逐像素一致，画面不变）；
+         · 双段点第 1 段：框顶 331 ⇒ **321**（原来 435，掉到第 2 段下面 —— 用户指出的问题）；
+         · 双段点第 2 段：框顶 445 ⇒ **435**（同 R166）。
+       ☠ 试过「框底 + 6」（面板贴在框下沿、不盖框）：单段会从 305 掉到 363，面板底边随即压住
+         「＋ 原因切割」按钮（R116 明确要求该按钮在面板打开时仍可点，`.rp-mask` 之外抬 z-index 就是为它）
+         ⇒ 该方案被 r113 当场打回。所以锚点取框顶 − 10：既紧靠被点的框，又保住既有单段位置与按钮可点。
+       ☠ 10 是 R166 的既有口径（框顶 315 − 顶边 305），不是新拍的数。
+       ☠ 只判一次、直接落值；下方空间不足由末尾 clamp 上推（3 段以上点末段时整块仍可见）。
+       ☠ 位置只在首帧算一次（R116 起 `_sized` 锁定，防面板跳动），所以这里算完即终值。 */
+    const anchorBox=el?toAppRect(el,_m):null;
     const segRows=reasonPop?Array.from(reasonPop.querySelectorAll('.seg-row1')):[];
-    if(segRows.length){
-      const rects=segRows.map(function(el){ return toAppRect(el,_m); });
+    if(anchorBox){
+      top=anchorBox.top-10;
+    } else if(segRows.length){
+      /* 兜底（拿不到点击框时，如程序化调用）：沿用 R166「末段行底 − 4」 */
+      const rects=segRows.map(function(rr){ return toAppRect(rr,_m); });
       const hit=rects.some(function(rr){ return top<rr.bottom&&top+h>rr.top; });
       if(hit) top=Math.max.apply(null,rects.map(function(rr){ return rr.bottom; }))-4;
     }
@@ -10556,7 +10567,10 @@ function openReasonPicker(i){
     /* R163（用户要求 3.2）：「请点击左侧选择框或原因文字确认原因」只在**原因阶段**（一级 / 二级原因条目）显示；
        换品种 / 换模具 的订单 / 模具选择阶段右侧是整卡选项（无勾选框、点卡片即选定），提示文案会指错对象 ⇒ 隐藏。 */
     var showTip=!(stage==='lv2'&&(s.lv1==='换品种'||s.lv1==='换模具'));
-    panel.innerHTML='<div class="rp-titlebar"><span class="rp-title">原因选择</span>'+
+    /* R170（用户要求）：存在多段原因时，标题「原因选择」后加「第 N 段」说明（单段不显示）。 */
+    var _segN=(window._segs||[]).length;
+    var segTag=_segN>1?('<span class="rp-segno">第 '+(i+1)+' 段</span>'):'';
+    panel.innerHTML='<div class="rp-titlebar"><span class="rp-title">原因选择</span>'+segTag+
       (showTip?'<span class="rp-tip">请点击左侧选择框或原因文字确认原因</span>':'')+
       '<span class="rp-cur">'+(curTxt?('当前：'+curTxt):'')+'</span>'+
       '<button class="rp-x" id="rpClose">×</button></div>'+rpExplainHtml(i)+body;
