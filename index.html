@@ -2140,8 +2140,9 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 /* ============ 生产执行 · 订单进度 ============ */
 .progress-data-table{table-layout:fixed;min-width:820px;}
 .order-filter-row label.order-check input{width:16px!important;flex:0 0 16px!important;}
-.progress-data-table th:nth-child(1){width:19%;}.progress-data-table th:nth-child(2){width:23%;}
-.progress-data-table th:nth-child(3){width:34%;}.progress-data-table th:nth-child(4){width:24%;}
+/* R173：列宽按设计图比例 —— 18 / 26.5 / 35.5 / 20（配料进度、成品订单两列加宽，成型进度收窄） */
+.progress-data-table th:nth-child(1){width:18%;}.progress-data-table th:nth-child(2){width:26.5%;}
+.progress-data-table th:nth-child(3){width:35.5%;}.progress-data-table th:nth-child(4){width:20%;}
 #app.sidebar-collapsed .progress-data-table{min-width:100%;}
 .progress-data-table thead th{text-align:center;background:#D8F1FC;padding:10px 6px;line-height:19px;}
 .progress-data-table tbody td{padding:6px 8px;line-height:19px;text-align:center;vertical-align:middle;}
@@ -4388,7 +4389,9 @@ const pageFilters={
   team:{sections:[],timeMode:'day',start:'2026-08-23',end:'2026-08-25',teams:[],machines:[],products:[]},
   machine:{sections:[],machines:[]},
   order:{semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:true,machines:[],start:'2026-08-20 00:00',end:'2026-08-26 23:59'},
-  progress:{sections:[],status:'unfinished',orderQuery:'',nameQuery:''},
+  /* R173：工段筛选 → 订单日期范围（默认覆盖全部 mock：一配 / 二配有 08-27 的记录，收在 08-26 会少 1 条未完成）；
+     订单搜索 → 半成品订单/名称，名称搜索 → 成品订单/名称（与异常核对页同口径） */
+  progress:{start:'2026-08-20 00:00',end:'2026-08-27 23:59',status:'unfinished',semiQuery:'',semiLabel:'',productQuery:'',productLabel:''},
   process:{start:'2026-08-26 13:09:33',end:'2026-08-26 15:09:33',span:'2h'}
 };
 const tablePaging={pending:{page:1,pageSize:8},history:{page:1,pageSize:12},switchHist:{page:1,pageSize:10},shift:{page:1,pageSize:10},loss:{page:1,pageSize:12},trend:{page:1,pageSize:12},trendDetail:{page:1,pageSize:4},order:{page:1,pageSize:12},progress:{page:1,pageSize:10}};
@@ -12897,12 +12900,7 @@ const ORDER_PROGRESS_DATA=[
   {section:'二配',machine:'二配',semiOrder:'2026082617',semiName:'黄金宝2#膨化料半成品',planQty:22.0,mixQty:0,mixStart:'',
    productOrder:'',productName:'',productPlan:0,formedQty:0,formStart:''}
 ];
-/* 工段筛选项：仅成型（制粒 / 膨化）与配料（一配 / 二配） */
-const PROGRESS_SECTIONS=['制粒','膨化','一配','二配'];
-function progressSectionOptions(){
-  const groupOf=s=>(s==='制粒'||s==='膨化')?'成型':'配料';
-  return PROGRESS_SECTIONS.map(s=>({v:s,t:'<span class="sec-opt"><i>'+groupOf(s)+'</i>'+s+'</span>'}));
-}
+/* R173：工段筛选已改为订单日期范围，原 PROGRESS_SECTIONS / progressSectionOptions 移除 */
 /* 进度百分比：保留一位小数，上限 100% */
 function pgPct(done,plan){ if(!plan||plan<=0) return 0; return Math.min(100,Math.round(done/plan*1000)/10); }
 function pgLevel(p){ return p>=100?'done':(p>=60?'run':'low'); }
@@ -12933,74 +12931,78 @@ function pgBar(done,plan,start,label){
     '<div class="pg-bar"><i class="'+lv+'" style="width:'+p+'%"></i></div>'+
     '<div class="pg-start">'+label+'('+st+'开始)</div></div>';
 }
-/* 订单进度：订单搜索（半成品/成品订单模糊）与名称搜索（半成品/成品名称模糊） */
-function progressOrderOptions(){
-  const seen={},out=[];
-  ORDER_PROGRESS_DATA.forEach(r=>{
-    [[r.semiOrder,r.semiName],[r.productOrder,r.productName]].forEach(pr=>{
-      const code=String(pr[0]||'').trim(); if(!code||seen[code])return;
-      seen[code]=1; out.push({code,name:String(pr[1]||'').trim()});
-    });
-  });
-  return out;
+/* R173：候选改为两侧独立 —— 半成品（订单+名称）、成品（订单+名称），与异常核对页 openOrderSemiSearch /
+   openOrderProductSearch 同款（标题、占位、进入即清空 R171、点候选带出名称 R162）。 */
+const progressSemiOptions=Array.from(new Set(ORDER_PROGRESS_DATA.map(r=>r.semiOrder))).map(code=>{const row=ORDER_PROGRESS_DATA.find(r=>r.semiOrder===code);return {code,name:row?row.semiName:code};});
+const progressProductOptions=Array.from(new Set(ORDER_PROGRESS_DATA.filter(r=>r.productOrder).map(r=>r.productOrder))).map(code=>{const row=ORDER_PROGRESS_DATA.find(r=>r.productOrder===code);return {code,name:row?row.productName:code};});
+/* 订单日期范围选择（按配料开始时间 mixStart 过滤），结构同订单执行页 openOrderRangePicker */
+function openProgressRangePicker(){
+  const gf=pageFilters.progress;
+  openPop(`<button class="close" onclick="closePop()">×</button><h3>选择订单日期范围</h3><div class="shift-range-fields"><div><label>开始日期时间</label><div class="f-input" id="progRangeStart" onclick="openDateTimePicker(this)"><span class="dv">${gf.start}</span><span class="arrow">▾</span></div></div><div><label>结束日期时间</label><div class="f-input" id="progRangeEnd" onclick="openDateTimePicker(this)"><span class="dv">${gf.end}</span><span class="arrow">▾</span></div></div></div><div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="applyProgressRange()">确认</button></div>`);
+  document.getElementById('progRangeStart')._dtValue=shiftTextToDT(gf.start);document.getElementById('progRangeEnd')._dtValue=shiftTextToDT(gf.end);
 }
-function progressNameOptions(){
-  const seen={},out=[];
-  ORDER_PROGRESS_DATA.forEach(r=>{
-    [[r.semiName,r.semiOrder],[r.productName,r.productOrder]].forEach(pr=>{
-      const name=String(pr[0]||'').trim(); if(!name||seen[name])return;
-      seen[name]=1; out.push({name,code:String(pr[1]||'').trim()});
-    });
-  });
-  return out;
-}
-function openProgressOrderSearch(){
-  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.orderQuery） */
+function applyProgressRange(){const start=document.querySelector('#progRangeStart .dv').textContent,end=document.querySelector('#progRangeEnd .dv').textContent;if(new Date(start.replace(' ','T'))>=new Date(end.replace(' ','T'))){toast('结束时间必须晚于开始时间');return;}Object.assign(pageFilters.progress,{start,end});tablePaging.progress.page=1;closePop();goPage('progress');toast('已应用订单日期范围');}
+/* 搜索半成品订单 / 半成品名称 */
+function openProgressSemiSearch(){
+  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.semiQuery） */
   const q='';
-  openPop(`<button class="close" onclick="closePop()">×</button><h3>订单搜索（半成品 / 成品订单）</h3>
-    <input class="f-input history-product-search" id="progOrderQuery" value="${q}" placeholder="输入半成品或成品订单号关键词" oninput="renderProgressOrderResults(this.value)">
-    <div class="history-search-results" id="progOrderResults"></div>
-    <div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="confirmProgressOrderSearch()">确认</button></div>`);
-  renderProgressOrderResults(q);
+  openPop(`<button class="close" onclick="closePop()">×</button><h3>搜索半成品订单 / 半成品名称</h3>
+    <input class="f-input history-product-search" id="progSemiQuery" value="${q}" placeholder="输入半成品订单号或半成品名称关键词" oninput="renderProgressSemiResults(this.value)">
+    <div class="history-search-results" id="progSemiResults"></div>
+    <div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="confirmProgressSemiSearch()">确认</button></div>`);
+  renderProgressSemiResults(q);
 }
-function renderProgressOrderResults(query){
+function renderProgressSemiResults(query){
   const q=String(query||'').trim().toLowerCase();
-  const items=progressOrderOptions().filter(o=>!q||o.code.toLowerCase().includes(q)||o.name.toLowerCase().includes(q));
-  const box=document.getElementById('progOrderResults'); if(!box)return;
-  box.innerHTML=items.length?items.map(o=>`<div class="history-search-item" onclick="pickProgressOrder('${o.code}')"><div class="history-search-code">${o.code}</div><div class="history-search-name">${o.name||'—'}</div></div>`).join(''):'<div style="padding:24px;text-align:center;color:var(--t2)">未找到匹配的订单，可点「确认」按关键词模糊筛选</div>';
+  const items=progressSemiOptions.filter(o=>!q||o.code.includes(q)||o.name.toLowerCase().includes(q));
+  const box=document.getElementById('progSemiResults'); if(!box)return;
+  box.innerHTML=items.length?items.map(o=>`<div class="history-search-item" onclick="pickProgressSemi('${o.code}')"><div class="history-search-code">${o.code}</div><div class="history-search-name">${o.name}</div></div>`).join(''):'<div style="padding:24px;text-align:center;color:var(--t2)">未找到匹配的半成品订单</div>';
 }
-function pickProgressOrder(code){
-  pageFilters.progress.orderQuery=code; tablePaging.progress.page=1;
-  closePop();goPage('progress');toast('已按订单筛选');
+function pickProgressSemi(code){
+  const selected=progressSemiOptions.find(o=>o.code===code);if(!selected)return;
+  pageFilters.progress.semiQuery=selected.code;
+  pageFilters.progress.semiLabel=selected.code+' / '+selected.name;
+  tablePaging.progress.page=1;
+  closePop();goPage('progress');toast('已按半成品订单 / 半成品名称自动查询');
 }
-function confirmProgressOrderSearch(){
-  const value=(document.getElementById('progOrderQuery').value||'').trim();
-  pageFilters.progress.orderQuery=value; tablePaging.progress.page=1;
-  closePop();goPage('progress');toast(value?'已按订单关键词筛选':'已清空订单搜索');
+function confirmProgressSemiSearch(){
+  const value=(document.getElementById('progSemiQuery').value||'').trim();
+  const selected=progressSemiOptions.find(o=>o.code===value||o.name===value);
+  pageFilters.progress.semiQuery=value;
+  pageFilters.progress.semiLabel=selected?selected.code+' / '+selected.name:value;
+  tablePaging.progress.page=1;
+  closePop();goPage('progress');toast('已按半成品订单或名称筛选');
 }
-function openProgressNameSearch(){
-  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.nameQuery） */
+/* 搜索成品订单 / 成品名称 */
+function openProgressProductSearch(){
+  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.productQuery） */
   const q='';
-  openPop(`<button class="close" onclick="closePop()">×</button><h3>名称搜索（半成品 / 成品名称）</h3>
-    <input class="f-input history-product-search" id="progNameQuery" value="${q}" placeholder="输入半成品或成品名称关键词" oninput="renderProgressNameResults(this.value)">
-    <div class="history-search-results" id="progNameResults"></div>
-    <div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="confirmProgressNameSearch()">确认</button></div>`);
-  renderProgressNameResults(q);
+  openPop(`<button class="close" onclick="closePop()">×</button><h3>搜索成品订单 / 成品名称</h3>
+    <input class="f-input history-product-search" id="progProductQuery" value="${q}" placeholder="输入成品订单号或成品名称关键词" oninput="renderProgressProductResults(this.value)">
+    <div class="history-search-results" id="progProductResults"></div>
+    <div class="pop-actions"><button class="btn btn-ghost" onclick="closePop()">取消</button><button class="btn btn-primary" onclick="confirmProgressProductSearch()">确认</button></div>`);
+  renderProgressProductResults(q);
 }
-function renderProgressNameResults(query){
+function renderProgressProductResults(query){
   const q=String(query||'').trim().toLowerCase();
-  const items=progressNameOptions().filter(o=>!q||o.name.toLowerCase().includes(q)||o.code.toLowerCase().includes(q));
-  const box=document.getElementById('progNameResults'); if(!box)return;
-  box.innerHTML=items.length?items.map(o=>`<div class="history-search-item" onclick="pickProgressName('${o.name}')"><div class="history-search-code">${o.name}</div><div class="history-search-name">${o.code||'—'}</div></div>`).join(''):'<div style="padding:24px;text-align:center;color:var(--t2)">未找到匹配的名称，可点「确认」按关键词模糊筛选</div>';
+  const items=progressProductOptions.filter(o=>!q||o.code.includes(q)||o.name.toLowerCase().includes(q));
+  const box=document.getElementById('progProductResults'); if(!box)return;
+  box.innerHTML=items.length?items.map(o=>`<div class="history-search-item" onclick="pickProgressProduct('${o.code}')"><div class="history-search-code">${o.code}</div><div class="history-search-name">${o.name}</div></div>`).join(''):'<div style="padding:24px;text-align:center;color:var(--t2)">未找到匹配的成品订单</div>';
 }
-function pickProgressName(name){
-  pageFilters.progress.nameQuery=name; tablePaging.progress.page=1;
-  closePop();goPage('progress');toast('已按名称筛选');
+function pickProgressProduct(code){
+  const selected=progressProductOptions.find(o=>o.code===code);if(!selected)return;
+  pageFilters.progress.productQuery=selected.code;
+  pageFilters.progress.productLabel=selected.code+' / '+selected.name;
+  tablePaging.progress.page=1;
+  closePop();goPage('progress');toast('已按成品订单 / 成品名称自动查询');
 }
-function confirmProgressNameSearch(){
-  const value=(document.getElementById('progNameQuery').value||'').trim();
-  pageFilters.progress.nameQuery=value; tablePaging.progress.page=1;
-  closePop();goPage('progress');toast(value?'已按名称关键词筛选':'已清空名称搜索');
+function confirmProgressProductSearch(){
+  const value=(document.getElementById('progProductQuery').value||'').trim();
+  const selected=progressProductOptions.find(o=>o.code===value||o.name===value);
+  pageFilters.progress.productQuery=value;
+  pageFilters.progress.productLabel=selected?selected.code+' / '+selected.name:value;
+  tablePaging.progress.page=1;
+  closePop();goPage('progress');toast('已按成品订单或名称筛选');
 }
 /* 订单进度：进度状态筛选（全部 / 未完成 / 完成），默认「未完成」 */
 function progressStatusOptions(){return [{v:'all',t:'全部'},{v:'unfinished',t:'未完成'},{v:'done',t:'完成'}];}
@@ -13028,9 +13030,10 @@ function pgStatusMatch(status,row){
 function orderProgress(){
   const gf=pageFilters.progress;
   const scoped=ORDER_PROGRESS_DATA.filter(r=>globalMachineMatch(r.machine))
-    .filter(r=>!gf.sections.length||gf.sections.includes(r.section))
-    .filter(r=>!gf.orderQuery||String(r.semiOrder||'').includes(gf.orderQuery)||String(r.productOrder||'').includes(gf.orderQuery))
-    .filter(r=>!gf.nameQuery||String(r.semiName||'').includes(gf.nameQuery)||String(r.productName||'').includes(gf.nameQuery))
+    /* R173：订单日期 = 配料开始时间 mixStart 落在 [start, end] 内；无 mixStart 的行不按日期拦（后面「未开始生产」规则兜底） */
+    .filter(r=>!gf.start||!gf.end||!r.mixStart||(r.mixStart>=gf.start&&r.mixStart<=gf.end))
+    .filter(r=>!gf.semiQuery||String(r.semiOrder||'').includes(gf.semiQuery)||String(r.semiName||'').includes(gf.semiQuery))
+    .filter(r=>!gf.productQuery||String(r.productOrder||'').includes(gf.productQuery)||String(r.productName||'').includes(gf.productQuery))
     .filter(r=>pgStatusMatch(gf.status,r))
     .filter(r=>!(r.mixStart===''&&(r.mixQty||0)<=0)) /* 去除未开始生产的订单 */
     .slice()
@@ -13053,9 +13056,10 @@ function orderProgress(){
   return {title:'',
     html:`<div class="order-page table-fill-page">
     <div class="card compact-filter-card order-filter-card"><div class="filter-row page-filter-row order-filter-row">
-      <div class="f-input multi-filter order-machine-filter ${gf.sections.length?'has-value':''}" data-all-text="全部工段" onclick="openPageMultiFilter(this,progressSectionOptions(),pageFilters.progress.sections,pickPageFilter('progress','sections'))"><span class="dv">${multiFilterText(gf.sections,'全部工段')}</span><span class="arrow">▾</span></div>
-      <div class="f-input history-product-search order-product-search ${gf.orderQuery?'':'placeholder'}" onclick="openProgressOrderSearch()" title="${gf.orderQuery||'订单搜索'}"><span class="dv">${gf.orderQuery||'订单搜索'}</span></div>
-      <div class="f-input history-product-search order-product-search ${gf.nameQuery?'':'placeholder'}" onclick="openProgressNameSearch()" title="${gf.nameQuery||'名称搜索'}"><span class="dv">${gf.nameQuery||'名称搜索'}</span></div>
+      <!-- R173：工段下拉 → 订单日期范围（样式同订单执行页 .order-range）；两搜索框 → 半成品 / 成品（样式同异常核对页） -->
+      <div class="f-input order-range" onclick="openProgressRangePicker()" title="${gf.start} ～ ${gf.end}"><span class="dv">${shortHistoryDateTime(gf.start)}　-　${shortHistoryDateTime(gf.end)}</span></div>
+      <div class="f-input history-product-search order-product-search ${gf.semiQuery?'':'placeholder'}" onclick="openProgressSemiSearch()" title="${gf.semiLabel||gf.semiQuery||'半成品订单或名称'}"><span class="dv">${gf.semiLabel||gf.semiQuery||'半成品订单或名称'}</span></div>
+      <div class="f-input history-product-search order-product-search ${gf.productQuery?'':'placeholder'}" onclick="openProgressProductSearch()" title="${gf.productLabel||gf.productQuery||'成品订单或名称'}"><span class="dv">${gf.productLabel||gf.productQuery||'成品订单或名称'}</span></div>
       <div class="f-input order-progress-filter" onclick="openProgressStatusPicker(this)"><span class="opf-main"><span class="opf-k">订单进度</span><span class="dv opf-v">${progressStatusText()}</span></span><span class="arrow">▾</span></div>
       <button class="btn btn-ghost btn-sm" onclick="resetSearch()">重置</button>
       </div></div>
@@ -13064,7 +13068,7 @@ function orderProgress(){
       <span class="order-stat">已完工：${doneCnt}</span>
       <span class="order-stat">生产中：${runningCnt}</span>
       <span class="order-stat">未开始：${waitCnt}</span>
-      <span class="order-stat">筛选工段：${gf.sections.indexOf(FILTER_NONE)>=0?'未选任何工段':(gf.sections.length?gf.sections.join('、'):'全部')}</span>
+      <span class="order-stat">筛选日期：${shortHistoryDateTime(gf.start)} - ${shortHistoryDateTime(gf.end)}</span>
     </div>
     <div class="card bottom-table-card order-table-card"><div class="tbl-wrap">
       <table class="progress-data-table"><thead><tr><th>半成品订单 / 名称</th><th>配料进度(实际/计划)</th><th>成品订单 / 成品名称</th><th>成型进度(实际/计划)</th></tr></thead>
@@ -13710,6 +13714,14 @@ function dtEnhanceColumns(table){
       }
     }
   }
+  /* R173：订单进度表列宽按设计图比例固定 —— 18 / 26.5 / 35.5 / 20（成品订单列最宽、成型进度收窄），
+     随容器宽度等比（☠ 该表原本走 dtAutoWidths 按内容均分，CSS 的 th 百分比宽会被 colgroup 覆盖，
+     必须在这里落 px）。放在 saved 分支之前：设计比例为硬口径，不读用户旧拖拽缓存。 */
+  else if(table.classList.contains('progress-data-table')&&ths.length===4){
+    const _pw=(table.closest('.tbl-wrap')||table).clientWidth||1132;
+    widths=[0.18,0.265,0.355,0.20].map(function(k){ return Math.round(_pw*k); });
+    widths[2]+=_pw-widths.reduce(function(a,b){ return a+b; },0); /* 取整误差补到最宽列 */
+  }
   else if(saved&&saved.length===ths.length){ widths=saved.slice(); }
   else if(table.classList.contains('mold-table')&&ths.length===11){
     /* R49：模具台账最新状态表新增「备注」列（异常说明），与 order-data-table / history-table 一样手写固定列宽。
@@ -13966,7 +13978,7 @@ function resetSearch(){
   if(curPage==='trend'){pageFilters.trend={sections:[],dim:'DAY',start:'2026-08-11',end:'2026-08-25',machines:pelletExpandMachines(),shifts:[],teams:[],materials:[],includeUnfinished:true,onlyTime:false,detailMetric:'',detailPeriod:''};tablePaging.trendDetail={page:1,pageSize:4};}
   if(curPage==='team') pageFilters.team={sections:[],timeMode:'day',start:'2026-08-23',end:'2026-08-25',teams:[],machines:[],products:[]};
   if(curPage==='order'){pageFilters.order={semiQuery:'',semiLabel:'',productQuery:'',productLabel:'',onlyAbnormal:true,machines:pelletExpandMachines(),start:'2026-08-20 00:00',end:'2026-08-26 23:59'};ctx.orderFocus=null;}
-  if(curPage==='progress') pageFilters.progress={sections:[],status:'unfinished',orderQuery:'',nameQuery:''};
+  if(curPage==='progress') pageFilters.progress={start:'2026-08-20 00:00',end:'2026-08-27 23:59',status:'unfinished',semiQuery:'',semiLabel:'',productQuery:'',productLabel:''};
   if(curPage==='machine') pageFilters.machine={sections:[],machines:[]};
   if(curPage==='moldhist') pageFilters.moldhist={machines:[],moldStatus:['在用'],place:[],view:'latest'};
   if(curPage==='process'){pageFilters.process={start:'2026-08-26 13:09:33',end:'2026-08-26 15:09:33',span:'2h'};ctx.procMachine='1#制粒';}
