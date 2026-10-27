@@ -2400,6 +2400,16 @@ tbody tr:active{background:var(--blue-light);}
 /* R168：所有弹窗标题字号统一为 22px（以原因选择弹窗 .rp-title 为基准；原 28px） */
 .pop h3{margin:0 0 20px; font-size:22px;}
 .pop .close{float:right; width:52px; height:52px; border-radius:12px; background:#f2f4f7; font-size:26px; color:var(--t2);}
+/* R171（用户要求）：弹窗 X 与标题**垂直居中对齐**（以标题为基线）。
+   病根：`.close` 是 float，顶端与标题首行顶端对齐；标题 R168 统一到 22px 后行高实测 30px，
+   而 X 是 52×52 ⇒ 中心比标题低 (52−30)/2 = 11px（截图里 X 明显偏下）。
+   做法：浮动 X 上提半个高差；标题仍按首行对齐（标题折行时 X 对准第一行，符合视觉预期）。
+   ☠ 行内 flex 头部（pgl-head / om-head / pop-header）本就 align-items:center，X 不在 .pop 直接子级，
+     `.pop > .close` 这个子选择器天然把它们排除在外，别再给它们加负 margin。 */
+.pop > .close{margin-top:-11px;}
+/* 同排的「历史查看」按钮（当班结束确认）与 X 同高，一并上提，避免两个浮块高低不齐 */
+.pop > .pop-history-btn{margin-top:-11px;}
+.pop.mold-ledger-pop > .close,.pop.mold-doc-pop > .close,.pop.drill-pop > .close{margin-top:-7px;}
 .pop-history-btn{float:right; margin-right:10px; height:52px; padding:0 18px; border-radius:12px;
   background:#F4F8FD; border:1.5px solid rgba(8,114,201,.2); color:var(--blue);
   font-size:16px; font-weight:600; cursor:pointer; line-height:1;}
@@ -11445,7 +11455,9 @@ const historyProductOptions=[
 const orderSemiOptions=Array.from(new Set(ORDER_EXECUTION_DATA.map(r=>r.semiOrder))).map(code=>{const row=ORDER_EXECUTION_DATA.find(r=>r.semiOrder===code);return {code,name:row?row.semi:code};});
 const orderProductOptions=Array.from(new Set(ORDER_EXECUTION_DATA.map(r=>r.orderNo))).map(code=>{const row=ORDER_EXECUTION_DATA.find(r=>r.orderNo===code);return {code,name:row?row.product:code};});
 function openHistoryProductSearch(){
-  const q=pageFilters.history.productQuery||'';
+  /* R171（用户要求）：搜索类弹窗进入时**默认清空搜索条件**（不回填上次筛选值），候选列表直接给全量；
+     上次的筛选结果仍保留在 pageFilters 里，只有点「确认」才会改写。 */
+  const q='';
   openPop(`<button class="close" onclick="closePop()">×</button><h3>搜索成品订单 / 成品名称</h3>
     <input class="f-input history-product-search" id="historyProductQuery" value="${q}" placeholder="输入成品订单号或成品名称关键词" oninput="renderHistoryProductResults(this.value)">
     <div class="history-search-results" id="historyProductResults"></div>
@@ -11475,7 +11487,8 @@ function confirmHistoryProductSearch(){
 }
 /* 订单执行：半成品订单 / 名称弹窗 */
 function openOrderSemiSearch(){
-  const q=pageFilters.order.semiQuery||'';
+  /* R171：进入即清空搜索条件（不回填 pageFilters.order.semiQuery） */
+  const q='';
   openPop(`<button class="close" onclick="closePop()">×</button><h3>搜索半成品订单 / 半成品名称</h3>
     <input class="f-input history-product-search" id="orderSemiPopupQuery" value="${q}" placeholder="输入半成品订单号或半成品名称关键词" oninput="renderOrderSemiResults(this.value)">
     <div class="history-search-results" id="orderSemiResults"></div>
@@ -11507,7 +11520,8 @@ function confirmOrderSemiSearch(){
 }
 /* 订单执行：成品订单 / 名称弹窗 */
 function openOrderProductSearch(){
-  const q=pageFilters.order.productQuery||'';
+  /* R171：进入即清空搜索条件（不回填 pageFilters.order.productQuery） */
+  const q='';
   openPop(`<button class="close" onclick="closePop()">×</button><h3>搜索成品订单 / 成品名称</h3>
     <input class="f-input history-product-search" id="orderProductPopupQuery" value="${q}" placeholder="输入成品订单号或成品名称关键词" oninput="renderOrderProductResults(this.value)">
     <div class="history-search-results" id="orderProductResults"></div>
@@ -12903,7 +12917,8 @@ function progressNameOptions(){
   return out;
 }
 function openProgressOrderSearch(){
-  const q=pageFilters.progress.orderQuery||'';
+  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.orderQuery） */
+  const q='';
   openPop(`<button class="close" onclick="closePop()">×</button><h3>订单搜索（半成品 / 成品订单）</h3>
     <input class="f-input history-product-search" id="progOrderQuery" value="${q}" placeholder="输入半成品或成品订单号关键词" oninput="renderProgressOrderResults(this.value)">
     <div class="history-search-results" id="progOrderResults"></div>
@@ -12926,7 +12941,8 @@ function confirmProgressOrderSearch(){
   closePop();goPage('progress');toast(value?'已按订单关键词筛选':'已清空订单搜索');
 }
 function openProgressNameSearch(){
-  const q=pageFilters.progress.nameQuery||'';
+  /* R171：进入即清空搜索条件（不回填 pageFilters.progress.nameQuery） */
+  const q='';
   openPop(`<button class="close" onclick="closePop()">×</button><h3>名称搜索（半成品 / 成品名称）</h3>
     <input class="f-input history-product-search" id="progNameQuery" value="${q}" placeholder="输入半成品或成品名称关键词" oninput="renderProgressNameResults(this.value)">
     <div class="history-search-results" id="progNameResults"></div>
