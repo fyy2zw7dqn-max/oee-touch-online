@@ -2917,7 +2917,9 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 /* 备注说明：非必填折叠链接 */
 .seg-remark-fold{display:inline-block; margin-top:6px; font-size:16px; color:var(--blue); cursor:pointer; font-weight:600; padding:6px 0; user-select:none;}
 .seg-remark-fold:hover{opacity:.8;}
-.seg-remark-toggle{color:var(--t2); font-size:14px; font-weight:400; margin-left:8px; cursor:pointer; text-decoration:none;}
+/* R172（用户要求）：备注说明**展开态**的「收起」由灰常规字改成**蓝色加粗**，
+   与折叠态的 `.seg-remark-fold`（`＋ 备注说明`，已是蓝色 600）统一成同一套「可点文字」外观。 */
+.seg-remark-toggle{color:var(--blue); font-size:14px; font-weight:700; margin-left:8px; cursor:pointer; text-decoration:none;}
 .seg-remark-toggle:hover{color:var(--blue); text-decoration:underline;}
 /* 原因维护：分段 / 备注紧凑化（R115：原 `.reason-body .dev-status` 三条随设备状态块外移删除） */
 .reason-body .field{margin-bottom:6px;}
@@ -8565,6 +8567,40 @@ function latestSwitchRec(orderNo,machine){
   });
   return best;
 }
+/* ============ R172 · 「当前模具」实时推算（确认原因弹窗信息卡第 1 行） ============
+   用户口径（原话）：「除了产品上线刚开始没有录入模具信息，正常只要在系统有过换模数据，一定有模具信息
+     （当前模具没有切换之前，当前的模具沿用上一次换模的模具信息，若系统维护了换模具信息重新进行计算）。」
+   ⇒ 模具**不再读死快照**（历史记录里那个值是 '—'，见 openLegacyHistoryReason），改为每次打开弹窗现算：
+     ① 本条记录自身维护的模具（换模具时录入的新模具 = 系统维护的换模信息，最具体）；
+     ② 该主机在「本记录停机开始时刻」之前（含）**最近一条**切换记录的「切换后」模具 ——
+        没切换就沿用上一次，这正是用户说的「沿用上一次换模的模具信息」；
+     ③ 本记录早于该主机全部切换记录 ⇒ 退到**最早那条**的「切换前」模具（那时装的就是这块）；
+     ④ 该主机压根没有切换数据 ⇒ 退回老快照 p.currentMold，仍为空则 '—'（= 产品上线刚开始）。
+   ⚠ 「切换前 / 后」：moldCode 被维护成「旧 → 新」形态时取左 / 右半（换模具才改模，换品种模具不变）；
+     全角右箭头是数据里的既有写法（见 SWITCH_HISTORY_DATA 的 moldCode），别改成半角 '->'。
+   ☠ 结果**不写回** p.currentMold：系统后补 / 修改换模信息后，下次打开必须重新算出来（用户明确要求）。
+   ☠ 只读 SWITCH_HISTORY_DATA（与「品种 / 模具历史」页同一源）；不要接 switchRecOfOrder —— 那个按成品订单
+     反查，同一主机同一订单可能被切换多次，口径不同。 */
+function moldCodeSide(code,side){
+  const s=String(code==null?'':code).trim();
+  if(!s) return '';
+  const parts=s.split('→').map(x=>x.trim()).filter(Boolean);
+  if(parts.length<2) return parts[0]||'';
+  return side==='before'?parts[0]:parts[parts.length-1];
+}
+function curMoldOfRecord(p){
+  if(!p) return '—';
+  const own=moldCodeSide(p.moldCode,'after');
+  if(own) return own;
+  const rows=(SWITCH_HISTORY_DATA[p.machine]||[]).slice().sort((a,b)=>String(a.time)<String(b.time)?-1:1);
+  const at=String(p.downStart||'');
+  let hit=null;
+  rows.forEach(r=>{ if(!at||String(r.time)<=at) hit=r; });
+  const fromHist=hit?moldCodeSide(hit.moldCode,'after'):(rows.length?moldCodeSide(rows[0].moldCode,'before'):'');
+  if(fromHist) return fromHist;
+  const snap=String(p.currentMold==null?'':p.currentMold).trim();
+  return snap&&snap!=='—'?snap:'—';
+}
 /* ============ R108 · 「配料匹配判定口径」小弹层 ============
    用户要求：把弹窗正文**末尾**那段（三条判定口径 + 处理方法）搬到「对账数据」状态徽标**后面**的「？」，
    **点击才弹**。文案逐字保留，只换承载方式。
@@ -9741,9 +9777,11 @@ function openReason(id){
              ⚠ 「上次切换」标签后缀的「（换品种 / 换模具）」已去掉 —— 类型现在直接显示在值里，留着重复。
              ⚠ R120（用户要求）：值里的**时间点**已改成**时间段** ⇒ 由 lastSwitchPeriodText(p.lastSwitchTime,p.lastSwitchDur)
                算出「起 ~ 止」；mock 为每条记录补了 lastSwitchDur（本次切换耗时）。
+             ⚠ R172（用户要求）：最右侧的模具改走 curMoldOfRecord(p) **实时推算**（不再直出 p.currentMold）——
+               历史记录里那个快照是 '—'，会渲染成「订单 / 品种 / —」。
              这段注释活在一个**反引号模板串**里，里面绝不能出现反引号（会把模板串截断，
                而 oee_syntax_check 仍报 bad=0 —— 它退化成 tagged template 照样能解析）。 -->
-        <div class="rh-row"><span class="rh-k">当前订单 / 品种和模具：</span><span class="rh-v">${p.order} / ${p.variety} / ${p.currentMold}</span></div>
+        <div class="rh-row"><span class="rh-k">当前订单 / 品种和模具：</span><span class="rh-v">${p.order} / ${p.variety} / ${curMoldOfRecord(p)}</span></div>
         <div class="rh-row"><span class="rh-k">上次切换信息：</span><span class="rh-v">${p.lastSwitchType||'—'}（${lastSwitchPeriodText(p.lastSwitchTime,p.lastSwitchDur)}）</span></div>
       </div>
     </div>
