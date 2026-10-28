@@ -640,7 +640,7 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 @keyframes rm-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.92);}}
 .rm-tb-meta{font-size:15px;color:var(--t2);}
 /* R84：页内「进行中 / 全部」由文字 tab（底部蓝条）改为**按钮样式**分段控件，
-   外观与 .mold-view-seg / .mold-kind-seg / .mold-bind-tabs 完全同款（44px 定高、1.5px 描边、选中蓝底白字）。
+   外观与 .mold-view-seg / .mold-bind-tabs 完全同款（44px 定高、1.5px 描边、选中蓝底白字）。
    ⚠ 原「新推荐」橙色胶囊 .rm-tb-alert 已移出本页 → 见顶层 tab 条的 `.grp-tab-newtip`（#rmTabNewTip）。 */
 .rm-grp-tabs{margin-bottom:14px;}
 .rm-seg{display:inline-flex;align-items:center;height:44px;border:1.5px solid var(--border);
@@ -1611,8 +1611,11 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .sh-filter-row-top{align-items:center;}
 .sh-machine-tabs{gap:5px; overflow-x:auto; scrollbar-width:none; flex-shrink:0;}
 .sh-machine-tabs::-webkit-scrollbar{display:none;}
-.sh-machine-tabs .process-machine-tab{height:28px; padding:0 9px; font-size:12px; border-radius:5px;}
-.sh-machine-tabs .process-machine-tab::before{width:6px; height:6px;}
+/* R180：主机 tab 去掉左侧状态圆点（::before 不再生成，flex gap 亦随之消失）；
+   字号 12→13px；padding 9→13px —— 圆点+gap 腾出 12px/个，加宽内边距基本抵消，
+   整行总宽几乎不变，右侧核查提示（.sh-stats，可收缩）不受挤压。 */
+.sh-machine-tabs .process-machine-tab{height:28px; padding:0 13px; font-size:13px; border-radius:5px;}
+.sh-machine-tabs .process-machine-tab::before{display:none;}
 /* R163：文案由「▣ 08/20 - 08/26」升为「08/20 00:00 ～ 08/26 23:59」⇒ 宽度改由内容决定
    （min-width:0 + 不换行），否则 140px 会把新文案挤成省略号。
    高度/字号保持 28px/13px —— 与本行左侧 28px 的主机 tab 同高，不把筛选行撑高。 */
@@ -3655,39 +3658,42 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .moldinfo-page{display:flex;flex-direction:column;overflow:hidden;}
 .moldinfo-page>.moldinfo-head{flex:0 0 auto;margin-bottom:10px;}
 .moldinfo-page>.moldinfo-body-card{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;margin-bottom:0;}
-/* R79 页头行：左边三个筛选控件、右边三个页签。
+/* R79 页头行：左边筛选控件、右边三个页签。
    ★ margin-left:auto 只给页签这一个元素 —— 同一行里放两个 auto margin 会平分剩余空间，
      页签就不会真正贴到右缘（R53 那次已踩过同款坑，口径与本页 .mold-filter-right 一致）。
-   ★ R79 前页头右侧是一句「可选模具 N 块 · 已绑定标签 N 块」统计，需求点名删除，规则一并删掉。 */
+   ★ R79 前页头右侧是一句「可选模具 N 块 · 已绑定标签 N 块」统计，需求点名删除，规则一并删掉。
+   ★ R180：左侧筛选控件 = 机器 / 模具编码 / 时间段（车间与控件前的文字说明均已删除）。 */
 .moldinfo-page .moldinfo-head-row{display:flex;align-items:center;gap:12px;min-width:0;}
 .moldinfo-page .moldinfo-head-row>.mold-bind-tabs{margin-left:auto;}
-/* 查询行 / 筛选行 / 感应标签选择器统一压回 44px：`.legacy-page .f-input` 的 52px 会把
+/* 筛选行 / 感应标签选择器统一压回 44px：`.legacy-page .f-input` 的 52px 会把
    同一排的控件拉开高度差（弹窗时代没有这层 .legacy-page，所以当时不需要这条）。 */
 .moldinfo-page .mold-bind-filters .f-input,
-.moldinfo-page .mold-bind-query .f-input,
 .moldinfo-page .mold-profile .f-input,
 .moldinfo-page .mold-scan-select{height:44px;}
-/* ---- R78 筛选行（车间 / 机器 / 时间段）；R79 移入页头并与页签同行、改紧凑布局 ----
-   R79 紧凑化只压缩**宽度与标签字号**，高度仍是 44px（与同排页签严格等高）。
-   控件宽度按「刚好放下最长的既有取值」定：车间「制粒车间」、机器「1#制粒」、
-   时间段「08-26 13:09 ~ 15:09」——留白挤掉的只是空气，不是内容。 */
+/* ---- R78 筛选行；R79 移入页头并与页签同行；R180 收敛为「机器 / 模具编码 / 时间段」----
+   R180 三处改动：
+     ① 车间筛选整体下线（车间只作为信息展示留在模具下拉副行 / 信息框里）；
+     ② 控件前的文字说明（车间 / 机器 / 时间段 / 模具编码）全部去掉 —— 需求点名删除，
+        `.ql` 规则随之删除，控件靠自身取值自解释；
+     ③ 模具编码从「查询行（只在查询页出现）」上移成常驻筛选条件，紧跟机器，
+        三个控件 + 右侧页签严格单行。
+   高度仍是 44px（与同排页签严格等高），宽度按「刚好放下最长的既有取值」定：
+   机器「1#制粒」150、模具编码「250365 · 环模 Φ3.8 · 压缩比 1:6」360、
+   时间段「08-26 13:09 ~ 15:09」218 —— 留白挤掉的只是空气，不是内容。
+   ☠ 模具编码给 360px 是有依据的：`.f-input .dv` 是 overflow-x:auto（可以横向滚动但不好读），
+     18px 字号下最长那条台账标签实测约 330px，360 才不出现滚动条。 */
 .mold-bind-filters{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0;flex:0 1 auto;}
-.mold-bind-filters .ql{font-size:15px;font-weight:600;color:var(--t2);white-space:nowrap;}
 .mold-info-f{width:150px;flex:0 0 150px;}
-#moldTimeSelect{width:218px;flex:0 0 218px;}
-/* ---- R78「标签类型」二选一分段（二维码 / RFID）----
-   外观与 .mold-view-seg / .mold-bind-tabs 完全同款（44px 定高、蓝色选中），
-   三处分段控件长得一样是刻意的：同一套「选一个」的语义就该有同一副面孔。 */
-.mold-kind-seg{display:inline-flex;align-items:center;height:44px;border:1.5px solid var(--border);
-  border-radius:7px;overflow:hidden;background:#fff;flex:0 0 auto;}
-.mold-kind-seg button{height:100%;padding:0 18px;border:0;border-left:1.5px solid var(--border);
-  background:none;color:var(--t2);font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;
-  white-space:nowrap;transition:transform .08s;}
-.mold-kind-seg button:first-child{border-left:0;}
-.mold-kind-seg button.on{background:var(--blue);color:#fff;}
-.mold-kind-seg button:active{transform:scale(.97);}
-/* 「绑定 / 解绑」页签：沿用 .mold-view-seg 的 44px 定高外观，
-   与下方查询行的 .f-input 严格同高（同排控件高度不一致在触屏上很显眼）。 */
+.mold-code-f{width:360px;flex:0 0 360px;}
+#moldBindSelect .dv{font-weight:600;}
+/* 时间段框取**自然宽**（R166 在其它页同一做法）：R176 把筛选文字提到 18px 后，
+   R79 定的 218px 已装不下「08-26 13:09 ~ 15:09」（实测被裁成「…15:0」），
+   而固定像素无论写多大都会在跨日区间（两端都带日期）时再裁一次。
+   auto + min-width:0 让它按当前取值自己撑开，行里剩下的空间本来也够（实测总宽 744 → 774，
+   距页签还有 168px 余量）。 */
+#moldTimeSelect{width:auto;flex:0 0 auto;min-width:0;}
+/* 「绑定 / 解绑 / 查询」页签：沿用 .mold-view-seg 的 44px 定高外观，
+   与同行筛选控件的 .f-input 严格同高（同排控件高度不一致在触屏上很显眼）。 */
 .mold-bind-tabs{display:inline-flex;align-items:center;height:44px;border:1.5px solid var(--border);
   border-radius:7px;overflow:hidden;background:#fff;flex:0 0 auto;}
 .mold-bind-tabs button{height:100%;padding:0 22px;border:0;border-left:1.5px solid var(--border);
@@ -3696,26 +3702,15 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-bind-tabs button:first-child{border-left:0;}
 .mold-bind-tabs button.on{background:var(--blue);color:#fff;}
 .mold-bind-tabs button:active{transform:scale(.97);}
-.mold-bind-query{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;}
-.mold-bind-query .ql{font-size:16px;font-weight:600;color:var(--t2);white-space:nowrap;}
-.mold-bind-query .mold-ledger-select{width:400px;flex:0 0 400px;}
-/* 上限口径直接写在界面上：选中模具后不必猜「还能再加几个」。
-   margin-left:auto 把它推到行尾，与左侧查询条件分开。 */
-.mold-bind-rule{margin-left:auto;font-size:14px;color:var(--t2);white-space:nowrap;}
-.mold-bind-rule b{color:var(--t1);font-family:var(--mono);}
 /* ---- R79 信息框（绑定 / 解绑两页共用）----
    取代 R52~R78 那行 .mold-ledger-meta（状态 / 参数 / 主机 / 投用 / 产量 / 钢印 / 绑定数 /
    供应商 / 保底全挤在一行，现场反馈「信息显示比较混乱」）。分三层：
      顶行控件（标签类型 + 模具编码）→ 关键信息 4 格 → 次级元信息网格 → 口径小字。
+   R180：顶行整块撤销（标签类型下线、模具编码上移到页头筛选行），关键信息 3 格。
    关键信息用浅蓝底呼应「蓝 = 标签相关」的既有语义（.mold-tag / .mold-scan-info 同色系）。 */
 .mold-profile{border:1px solid var(--border);border-radius:12px;padding:14px 16px 12px;background:#fff;margin-bottom:12px;}
-.mold-profile .mp-head{display:flex;align-items:center;gap:10px;padding-bottom:13px;
-  border-bottom:1px solid var(--border);margin-bottom:13px;}
-.mold-profile .ql{font-size:15px;font-weight:600;color:var(--t2);white-space:nowrap;}
-/* 模具编码靠右（需求）：margin-left:auto 单独给这一个元素，页签那一行的同款口径见 .moldinfo-head-row */
-.mold-profile .mp-code{margin-left:auto;width:360px;flex:0 0 360px;}
-/* 关键信息 4 格：状态 / 主机 / 已绑二维码 / 已绑 RFID */
-.mold-profile .mp-facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 14px;margin-bottom:14px;}
+/* 关键信息 3 格：状态 / 主机 / 已绑 RFID（R180 之前是 4 格，二维码那格随类型下线一并删除） */
+.mold-profile .mp-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px;margin-bottom:14px;}
 .mold-profile .mp-fact{display:flex;flex-direction:column;gap:4px;min-width:0;
   padding:10px 13px;border-radius:9px;background:#F4F9FF;border:1px solid #D3E6F7;}
 .mold-profile .mp-fact .k{font-size:13px;color:var(--t2);}
@@ -3756,19 +3751,9 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 /* 到上限时的提示：说清「为什么没有加号」并指明下一步去哪（解绑页），不留一个死掉的空行 */
 .mold-tag-full{padding:8px 10px;border-radius:8px;background:rgba(246,165,0,.12);color:#B97A00;
   font-size:13px;line-height:1.45;}
-.mold-add-btn{width:100%;height:42px;border:1.5px dashed var(--blue);border-radius:9px;
-  background:var(--blue-light);color:var(--blue);font-size:16px;font-weight:600;font-family:inherit;
-  cursor:pointer;transition:transform .08s;}
-.mold-add-btn:active{transform:scale(.97);}
-/* 就地的标签输入行（扫码枪会把内容直接敲进这个输入框并按回车） */
-.mold-tag-input{border:1.5px solid var(--blue);border-radius:9px;padding:10px;background:#fff;}
-.ti-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.ti-label{font-size:14px;font-weight:600;color:var(--t2);white-space:nowrap;}
-.ti-input{flex:1;min-width:0;height:44px;border:1.5px solid var(--border);border-radius:8px;
-  padding:0 12px;font-size:16px;font-family:inherit;color:var(--t1);background:#fff;}
-.ti-input:focus{outline:none;border-color:var(--blue);}
-.ti-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.ti-actions .mold-ledger-btn{height:38px;padding:0 14px;font-size:15px;}
+/* R180：`.mold-add-btn`（＋ 绑定二维码）与 `.mold-tag-input / .ti-*`（二维码扫码手输行）
+   随二维码类型一并删除 —— 标签区现在只有 RFID 一种入口（感应标签下拉），
+   不再有「就地插入输入行」这条路径，这些规则已无任何节点可命中。 */
 /* ---- 解绑页：已绑定标签清单（每行一个「解绑」） ---- */
 .mold-bind-list{display:flex;flex-direction:column;gap:8px;}
 .mold-bind-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);
@@ -3782,13 +3767,11 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-bind-kind{display:inline-block;padding:0 8px;border-radius:7px;font-size:13px;font-weight:700;
   line-height:20px;white-space:nowrap;}
 /* ★ 修饰类名带 k- 前缀，**不能**写成 `.mold-bind-kind.qr`：
-   2056 行已有一条全局 `.qr{width:300px;height:300px;margin:0 auto;border-radius:16px;padding:14px}`
-   （设备报障二维码用的）。`.mold-bind-kind.qr` 只覆盖了 background / color，
-   那条 .qr 的 300×300 会照旧生效 → 这个「类型标签」被渲染成 300×300 的大白块，
-   并通过 min-content 把父级 .k 顶到 300px 宽、整行撑到 322px 高（实测 100×20 → 300×300）。
-   同一份样式表里，单字类名（.qr / .rfid / .k / .v …）随时会被别处占用——
-   新组件一律加自己的前缀，不要拿通用短名当修饰类。 */
-.mold-bind-kind.k-qr{background:rgba(10,132,255,.10);color:var(--blue);}
+   2056 行有一条全局 `.qr{width:300px;height:300px;…}`（设备报障二维码用的），单靠
+   `.mold-bind-kind.qr` 覆盖 background/color 挡不住它，这个「类型标签」会被渲染成
+   300×300 的大白块并把整行撑到 322px 高。同一份样式表里，单字类名（.qr / .rfid / .k / .v …）
+   随时会被别处占用 —— 新组件一律加自己的前缀，不要拿通用短名当修饰类。
+   （R180：`.k-qr` 那条规则随二维码下线删除，只剩 RFID 一种类型标签。） */
 .mold-bind-kind.k-rfid{background:rgba(0,189,85,.12);color:#00A64A;}
 .mold-bind-row .v{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
 .mold-bind-row .v b{font-family:var(--mono);font-size:16px;color:var(--t1);
@@ -3858,10 +3841,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
    是「标签 / 码值」那一行专用的 16px mono 样式，写在描述行里会把模具编码顶成标题。 */
 .mold-scan-row .v .mk{font-weight:700;color:var(--t1);}
 .mold-scan-row .v .sub{font-size:12px;color:var(--t2);}
-/* R79 二维码行行尾：扫描时刻（时间点）。
-   （R78 那一列「已绑本模具 / 未绑定」的 .own-txt 已删除：R79 起这两个查询列表
-     都改用「关联模具 X · 主机 Y」的整行描述，行尾再挂一个归属小标就是同一件事说两遍。） */
-.mold-scan-row .at{flex:0 0 auto;font-family:var(--mono);font-size:14px;color:var(--t2);white-space:nowrap;}
+/* R79 二维码行行尾的扫描时刻（`.mold-scan-row .at`）随二维码查询列表下线一并删除。 */
 /* ---- R79 感应信号读取明细（查询页点「详情」展开）----
    一次会话动辄一两百次读取，所以固定高度 + 内部滚动，两列排版把纵向长度再砍一半。
    强度条用固定区间映射（见 moldReadBarW），条长在行与行之间可比。 */
@@ -4118,7 +4098,6 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .loss-period-card .f-input,.loss-period-card .f-input .dv,
 .msg-filter-card .f-input,.msg-filter-card .f-input .dv,
 .mold-bind-filters .f-input,.mold-bind-filters .f-input .dv,
-.mold-bind-query .f-input,.mold-bind-query .f-input .dv,
 .dropdown-panel .dropdown-item{font-size:18px!important;}
 </style>
 <style id="__dm_no_drag_style__">* { -webkit-user-drag: none !important; }</style><style id="__dm_bindable_badge_style__">[data-sp-bindable="database"]{outline:1px dashed #0088ff;outline-offset:2px;border-radius:4px;}[data-sp-bindable="database"] *{pointer-events:none !important;transition:none !important;animation:none !important;}[data-sp-bindable="database"]{transition:none !important;animation:none !important;}
@@ -15462,45 +15441,40 @@ function openMoldDoc(src,code){
   if(pop) pop.classList.add('mold-doc-pop');
 }
 
-/* ============ R52 模具信息管理（二维码 / RFID 标签的绑定与解绑） ============
+/* ============ R52 模具信息管理（RFID 标签的绑定与解绑） ============
    入口 = 模具台账筛选行的「信息管理」按钮。
-   上限口径（需求「一个模具编码绑定 1 个二维码或 3 个 RFID 标签」）：
-   一块模具最多 1 个二维码、最多 3 个 RFID 标签，两个上限互相独立。
-   另解：若按「二维码与 RFID 二选一」实现，需求紧接着那句「已经绑定的可以增加绑定信息」
-   就没有可增加的余地了（绑了二维码就到底了）。从业务侧看也说不通：环模上本来就同时
-   贴二维码（五金仓出库、单据流转用）和多个 RFID（高温磨损环境下绕圈贴几个做冗余，
-   坏一个还有别的可读）。所以这里按「1 个二维码 + 最多 3 个 RFID」落地，
-   上限值集中在 MOLD_QR_MAX / MOLD_RFID_MAX 两个常量，若口径要改成二选一，
-   只需在 confirmMoldTag 里补一条互斥判断。
+   上限口径（需求「一个模具编码绑定 3 个 RFID 标签」）：一块模具最多 3 个 RFID 标签。
+   ---- R180：二维码类型整体下线 ----
+   需求（第 20 轮）「去除标签类型筛选框，去除二维码类型相关信息」：
+   一块模具只按 RFID 标签记账 —— MOLD_QR_MAX / MOLD_BIND_KINDS / 二维码扫描记录
+   / 二维码查询列表 / 扫码手输行（.mold-tag-input）全部删除，
+   绑定与解绑两侧都只剩「从感应记录里选 RFID 标签」这一条路。
    ⚠ 绑定数据是纯前端 mock（下列 MOLD_BINDINGS 的初始值）。正式对接时应落到
      模具主档的绑定关系表，并保留「历史绑定 / 解绑」留痕——原型不做留痕。 */
-const MOLD_QR_MAX=1;
 const MOLD_RFID_MAX=3;
 /* 操作时间统一取 MOLD_UPDATED_AT（原型的「当前时刻」），不要用 new Date()：
    整个原型的 mock 数据都停在 2026-08-26 15:09，真写入系统时间会让新绑定显示成别的月份，
    比台账更新时间晚一大截，现场会以为数据错乱。 */
 const MOLD_BIND_OPERATOR='陈锦海';
 /* 初始绑定关系（覆盖三种状态，保证绑定与解绑两条路都能当场演示）：
-     · 250365        1 个二维码、RFID 空    → 演示「已绑定后继续增加绑定信息」
-     · HM-L40-30-01  1 个二维码 + 3 个 RFID → 演示「已达上限」
-     · PH-E25-20-02  2 个 RFID、无二维码    → 演示「再补一个 RFID / 补二维码」
-     · HM-L40-25-03  仅 1 个二维码          → 演示解绑
-     · PH-E25-30-01  仅 1 个 RFID
+     · 250365        1/3 → 演示「已绑定后继续增加绑定信息」
+     · HM-L40-30-01  3/3 → 演示「已达上限」
+     · PH-E25-20-02  1/3 → 演示「再补标签 / 跨模具查重」
+     · HM-L40-25-03  1/3 → 演示解绑
+     · PH-E25-30-01  1/3
    其余模具全部未绑定 → 演示「从头绑定」。
-   标签值刻意用 HD-QR- / HD-RFID- 前缀：与「二维码 / RFID」两种类型一一对应，
-   看值就知道类型，不必回头查表。 */
+   ☠ 标签值必须取自 MOLD_RFID_SCANS：绑定关系与感应记录是两套数据，但「已绑在别的模具上」
+     这个状态要靠两边对得上才讲得通（下拉里会标出「已绑在模具 X」）。R180 删掉二维码后
+     重新分配了这 7 个标签，保证默认时间段（最近 2 小时）里还剩未占用的候选可绑。 */
 const MOLD_BINDINGS={
-  '250365':[{kind:'qr',v:'HD-QR-250365-0001',at:'2026-08-20 09:12',by:'陈锦海'}],
+  '250365':[{kind:'rfid',v:'HD-RFID-9F21A0',at:'2026-08-20 09:12',by:'陈锦海'}],
   'HM-L40-30-01':[
-    {kind:'qr',v:'HD-QR-L4030-0001',at:'2026-08-14 10:05',by:'陈锦海'},
-    {kind:'rfid',v:'HD-RFID-9F21A0',at:'2026-08-14 10:07',by:'陈锦海'},
-    {kind:'rfid',v:'HD-RFID-9F21B4',at:'2026-08-14 10:09',by:'陈锦海'},
-    {kind:'rfid',v:'HD-RFID-9F21C8',at:'2026-08-14 10:11',by:'陈锦海'}],
-  'PH-E25-20-02':[
-    {kind:'rfid',v:'HD-RFID-3C7E10',at:'2026-08-23 08:40',by:'林志远'},
-    {kind:'rfid',v:'HD-RFID-3C7E22',at:'2026-08-23 08:42',by:'林志远'}],
-  'HM-L40-25-03':[{kind:'qr',v:'HD-QR-L4025-0007',at:'2026-08-18 14:22',by:'林志远'}],
-  'PH-E25-30-01':[{kind:'rfid',v:'HD-RFID-5A11D2',at:'2026-08-20 16:31',by:'陈锦海'}]
+    {kind:'rfid',v:'HD-RFID-9F21B4',at:'2026-08-14 10:07',by:'陈锦海'},
+    {kind:'rfid',v:'HD-RFID-9F21C8',at:'2026-08-14 10:09',by:'陈锦海'},
+    {kind:'rfid',v:'HD-RFID-3C7E10',at:'2026-08-14 10:11',by:'陈锦海'}],
+  'PH-E25-20-02':[{kind:'rfid',v:'HD-RFID-3C7E22',at:'2026-08-23 08:40',by:'林志远'}],
+  'HM-L40-25-03':[{kind:'rfid',v:'HD-RFID-5A11D2',at:'2026-08-18 14:22',by:'林志远'}],
+  'PH-E25-30-01':[{kind:'rfid',v:'HD-RFID-7B30C5',at:'2026-08-20 16:31',by:'陈锦海'}]
 };
 /* 读接口一律返回**新数组**或模块常量，绝不把内部数组暴露出去：
    moldBindOf 若返回 MOLD_BINDINGS[code] 本体，调用方一句 filter 之外的无心 push
@@ -15511,9 +15485,11 @@ function ensureMoldBind(code){
   if(!MOLD_BINDINGS[code]) MOLD_BINDINGS[code]=[];
   return MOLD_BINDINGS[code];
 }
-function moldBindSecMeta(kind){
-  const isQr=kind==='qr';
-  return {kind:kind,isQr:isQr,title:isQr?'二维码':'RFID 标签',max:isQr?MOLD_QR_MAX:MOLD_RFID_MAX};
+/* R180：标签类型只剩 RFID 一种，「二选一」不存在了 —— 本函数保留成*唯一*的口径出口
+   （标题 / 上限都从这里取，别再在别处写死 '3'）。参数保留但不再参与判断：
+   调用方历史上都传了 kind，多传一个参数在 JS 里是无害的。 */
+function moldBindSecMeta(){
+  return {kind:'rfid',title:'RFID 标签',max:MOLD_RFID_MAX};
 }
 function moldBindSecItems(code,kind){
   return moldBindOf(code).filter(function(b){return b.kind===kind;});
@@ -15537,27 +15513,22 @@ function moldTagOwner(tag,exceptCode){
   return null;
 }
 
-/* ================= R78 信息管理：筛选维度（车间 / 机器 / 时间段）与 RFID 感应记录 =================
+/* ================= R78 信息管理：筛选维度（机器 / 模具编码 / 时间段）与 RFID 感应记录 =================
    需求（第 15 轮）：
-     · 绑定 / 解绑下、模具编码**上方**新增筛选条件：车间、机器、时间段（默认最近 2 小时内）、模具编码；
-     · 二维码与 RFID 改为「二选一」；
+     · 绑定 / 解绑下新增筛选条件：机器、时间段（默认最近 2 小时内）、模具编码；
      · 选 RFID 时，标签来源改为「筛选时间段内感应到的 RFID 标签」下拉弹窗选择，
        选中后用信息块展示感应时间段、平均信号强度等。
-   ---- 车间口径 ----
-   车间按**模具类型**推导（环模 → 制粒车间、膨化模 → 膨化车间），而不是按 u.machine：
-   machine 为空的是闲置 / 报废模具，按 machine 推会让它们在任何车间下都不出现，
-   现场「选了制粒车间却找不到刚下机的环模」会以为数据丢了。按类型推则 14 块模具全部有归属。
+   ---- R180：车间筛选下线 ----
+   「车间」不再是筛选维度（需求「去除车间筛选框」）：车间只作为**信息展示**留在
+   模具下拉副行与信息框里（`moldWorkshopOf`）。
+   ⚠ 由此 `moldWorkshopOfMachine` 一并删除 —— 它只服务于「车间 × 感应记录」这个已不存在的筛选：
+     感应记录里只有机器，车间只能由机器反推（制粒 / 膨化），本来就与模具侧的「按类型推」
+     是两套口径，删掉筛选后这个反推没有第二个用处。
    机器则**只能用 u.machine**（模具此刻所在主机），未上机的不出现在任何机器下 —— 这正是机器筛选的语义：
    回答「这台主机上现在装的是哪块模具」。 */
 const MOLD_WORKSHOP={'环模':'制粒车间','膨化模':'膨化车间'};
-const MOLD_WORKSHOPS=['制粒车间','膨化车间'];
 const MOLD_MACHINE_LIST=['1#制粒','2#制粒','1#膨化','2#膨化'];
 function moldWorkshopOf(code){return MOLD_WORKSHOP[moldInfo(code).type]||'';}
-function moldWorkshopOfMachine(machine){
-  const m=String(machine||'');
-  if(!m) return '';
-  return m.indexOf('制粒')>=0?'制粒车间':(m.indexOf('膨化')>=0?'膨化车间':'');
-}
 /* 时间段默认 = 「最近 2 小时」，终点取原型的当前时刻 MOLD_UPDATED_AT。
    与「运行参数」页的默认区间刻意保持一致（同为 13:09 ~ 15:09）——
    同一台触摸屏上两个页面对「最近」给出不同的起点，现场会怀疑哪个才对。 */
@@ -15589,24 +15560,8 @@ const MOLD_RFID_SCANS=[
   {tag:'HD-RFID-4D8866',machine:'1#制粒',from:'2026-08-26 11:48:09',to:'2026-08-26 11:50:52',avg:-60,min:-74,max:-53,reads:143},
   {tag:'HD-RFID-4D8890',machine:'2#制粒',from:'2026-08-26 09:20:33',to:'2026-08-26 09:23:15',avg:-62,min:-77,max:-55,reads:108}
 ];
-/* 二维码扫描记录（原型假设数据，R79 新增）。
-   与 RFID 那段的关键差别：二维码是**一物一码、点读**，读写器读到的是一瞬间，不是一段停留 ——
-   所以记的是「时间点」（at），没有时间段、也没有信号强度。
-   machine 记的是**扫码当时所在的主机**；二维码属于哪块模具由 MOLD_BINDINGS 的绑定关系推导
-   （与 RFID 同口径：归属不冗余存，解绑后两处不会打架）。
-   刻意混入两条「扫到了但还没绑到任何模具」的码：查询页要能把「未关联模具」这个状态如实显示出来，
-   否则现场看到一条没有模具的码会以为是页面漏了数据。 */
-const MOLD_QR_SCANS=[
-  {code:'HD-QR-L4030-0001',machine:'2#制粒',at:'2026-08-26 14:48:20'},
-  {code:'HD-QR-250365-0001',machine:'1#制粒',at:'2026-08-26 14:12:05'},
-  {code:'HD-QR-E2530-0003',machine:'2#膨化',at:'2026-08-26 14:05:50'},
-  {code:'HD-QR-L4025-0007',machine:'1#制粒',at:'2026-08-26 13:58:41'},
-  {code:'HD-QR-E2520-0009',machine:'1#膨化',at:'2026-08-26 13:47:16'},
-  {code:'HD-QR-L4030-0001',machine:'2#制粒',at:'2026-08-26 13:30:12'},
-  {code:'HD-QR-L4025-0007',machine:'1#制粒',at:'2026-08-26 11:41:33'},
-  {code:'HD-QR-L4030-0001',machine:'2#制粒',at:'2026-08-26 09:33:02'},
-  {code:'HD-QR-250365-0001',machine:'1#制粒',at:'2026-08-26 08:52:44'}
-];
+/* 二维码扫描记录（R79 新增）连同 `moldQrScanRecords()` / 查询页二维码列表，
+   R180 按「去除二维码类型相关信息」整段删除。 */
 /* 时间一律走 Date 解析再比，不用字符串比大小：感应记录精确到秒（…15:05:02），
    筛选区间只到分（…15:05），字符串比较会把 15:05:02 判成「大于 15:05」而漏掉。 */
 function moldScanTs(s){return new Date(String(s).replace(' ','T')).getTime();}
@@ -15665,10 +15620,11 @@ function moldScanDetailReads(sc){
   }
   return out;
 }
-/* 「归属 + 主机」整行文案（二维码 / RFID 两个查询列表共用）。
+/* 「归属 + 主机」整行文案（查询列表每一行的描述行）。
    未关联时明确写「未关联模具」并给提醒色 —— 留空或写「—」会被当成「还没加载出来」；
    ⚠ 这一行里**不要**再叠一个行尾的「未关联模具」小标，否则同一件事说两遍（R79 踩过）。
-   关联时在括号里带上车间：模具编码对现场是「一块铁」，车间才是「去哪找」。 */
+   关联时在括号里带上车间：模具编码对现场是「一块铁」，车间才是「去哪找」。
+   （R180：二维码查询列表删除后，本函数只剩查询页 RFID 列表一个调用方。） */
 function moldOwnerLine(tag,machine){
   const owner=moldTagOwner(tag,'');
   const host='主机 '+machine;
@@ -15676,36 +15632,27 @@ function moldOwnerLine(tag,machine){
   const ws=moldWorkshopOf(owner);
   return '关联模具 <span class="mk">'+owner+'</span>'+(ws?'<span class="sub">（'+ws+'）</span>':'')+' · '+host;
 }
-/* 当前筛选条件（车间 / 机器 / 时间段）下的二维码扫描记录，按扫码时刻倒序。
-   车间口径与 moldScanRecords 一致：只能按「它出现在哪台主机的读码器上」推。 */
-function moldQrScanRecords(){
-  const st=moldBindState;
-  return MOLD_QR_SCANS.filter(function(sc){
-    if(st.ws&&moldWorkshopOfMachine(sc.machine)!==st.ws) return false;
-    if(st.machine&&sc.machine!==st.machine) return false;
-    /* 模具编码筛选作用于**归属**（同 RFID）：记录里只有码，没有模具 */
-    if(st.code!==MOLD_ALL_UNITS&&moldTagOwner(sc.code,'')!==st.code) return false;
-    return moldScanTs(sc.at)>=moldScanTs(st.from)&&moldScanTs(sc.at)<=moldScanTs(st.to);
-  }).sort(function(a,b){return moldScanTs(b.at)-moldScanTs(a.at);});
-}
 
 /* 信息管理页状态。
    tab   = bind(绑定) / unbind(解绑) / query(信息查询)
-   kind  = qr / rfid —— 标签类型二选一，决定下方展示哪一类标签（R78）
    code  = 当前模具编码；query 页允许 '__ALL__' = 不限定模具（其余两页必须是一块具体模具）
    def   = 进入本页时预选的那块模具（从解绑页切回绑定时用它回退）
-   ws / machine  = 车间 / 机器筛选；from / to = 感应时间段（默认最近 2 小时）
+   machine = 机器筛选；from / to = 感应时间段（默认最近 2 小时）
    scan  = 绑定页里从感应下拉中选中的标签号（未确认为绑定关系前只存这里）
-   qopen = 信息查询页里展开信息块的那一行 key（同一时刻只展开一行） */
+   qopen = 信息查询页里展开信息块的那一行 key（同一时刻只展开一行）
+   ---- R180 ----
+     · 删掉 `kind`（标签类型下线，只剩 RFID，写死由 moldBindSecMeta 提供口径）；
+     · 删掉 `ws`（车间筛选下线）；
+     · `tab` 默认 = **query**（需求「默认显示查询页面」），且 code 默认「全部模具」。 */
 const MOLD_ALL_UNITS='__ALL__';
 let moldBindState=(function(){
   const r=moldScanPresetRange(2);
-  return {tab:'bind',kind:'qr',code:'',def:'',ws:'',machine:'',from:r.from,to:r.to,scan:'',qopen:''};
+  return {tab:'query',code:MOLD_ALL_UNITS,def:'',machine:'',from:r.from,to:r.to,scan:'',qopen:''};
 })();
-/* R79：「信息查询」收成「查询」——这一行现在同时承载左侧三个筛选控件 + 右侧三个页签，
+/* R79：「信息查询」收成「查询」——这一行现在同时承载左侧筛选控件 + 右侧三个页签，
    四个字的页签会把同一行撑宽，压缩左侧可用宽度（页签文案在 R79 需求里被明确点名为「查询」）。 */
 const MOLD_BIND_TABS=[{v:'bind',t:'绑定'},{v:'unbind',t:'解绑'},{v:'query',t:'查询'}];
-const MOLD_BIND_KINDS=[{v:'qr',t:'二维码'},{v:'rfid',t:'RFID 标签'}];
+/* R180：`MOLD_BIND_KINDS`（二维码 / RFID 二选一的取值表）随标签类型筛选删除。 */
 /* 锚点文案：直接复用台账明细的模具标签写法（「250365 · 环模 Φ3.8 · 压缩比 1:6」）。
    R52 不另造一套写法——同一块模具在台账、明细、信息管理三处显示不一致，
    现场会怀疑自己选错了模具。R78：信息查询页多一个「全部模具」的合法取值。 */
@@ -15715,12 +15662,12 @@ function moldBindLabel(code){
   if(!MOLD_UNIT_BY_CODE[code]) return code;
   return moldLedgerLabel(code);
 }
-/* R78：车间 / 机器筛选作用于**模具下拉的候选集**（模具编码本身也是筛选条件之一，
-   它只列出当前车间 / 机器下的模具）。未上机（machine 为空）的模具只在「全部机器」下出现。 */
+/* 机器筛选作用于**模具下拉的候选集**（模具编码本身也是筛选条件之一，
+   它只列出当前机器下的模具）。未上机（machine 为空）的模具只在「全部机器」下出现。
+   R180：车间那一维删除，这里只剩机器。 */
 function moldBindUnits(){
   const st=moldBindState;
   return MOLD_UNITS.filter(function(u){
-    if(st.ws&&moldWorkshopOf(u.code)!==st.ws) return false;
     if(st.machine&&u.machine!==st.machine) return false;
     return true;
   });
@@ -15780,10 +15727,12 @@ function moldBindPick(code){
      （与台账页的筛选条件同一口径：切页不重置，只有「重置」按钮才清。） */
 function openMoldBind(code){
   const def=MOLD_UNIT_BY_CODE[code]?code:MOLD_UNITS[0].code;
-  /* 每次从台账进来都从「绑定」页签起步：沿用 R52 口径，入口不做「记住上次页签」，
-     现场点「信息管理」看到的第一屏永远是绑定页（新增绑定是主用例）。 */
-  moldBindState.tab='bind';
-  moldBindState.code=def;
+  /* R180：每次从台账进来都从「查询」页签起步（需求「默认显示查询页面」）。
+     R52~R79 曾是「绑定」页起步，那是以「新增绑定是主用例」为假设；
+     现场实际进来先看「这块模具到底绑了哪个标签、最近读到没有」，查询才是第一屏。
+     入口仍不做「记住上次页签」：同一台触摸屏三班倒，留上次的页签只会让人以为点错了。 */
+  moldBindState.tab='query';
+  moldBindState.code=MOLD_ALL_UNITS;
   moldBindState.def=def;
   moldBindState.scan='';
   moldBindState.qopen='';
@@ -15814,27 +15763,18 @@ function setMoldBindTab(tab){
   }
   moldBindPaint();
 }
-/* 切换标签类型（二维码 / RFID 二选一，R78）。
-   与切页签同理：会重建结果体，先收掉可能开着的下拉（感应标签下拉就挂在结果体里）。 */
-function setMoldBindKind(kind){
-  const k=kind==='rfid'?'rfid':'qr';
-  if(k===moldBindState.kind) return;
-  closeDropdown(true);
-  moldBindState.kind=k;
-  moldBindState.scan='';
-  moldBindState.qopen='';
-  moldBindPaint();
-}
-/* 车间 / 机器筛选：只重建「模具编码」下拉与结果体，筛选行自身不重建
-   （重建会让刚点开的下拉锚点失效）。 */
+/* R180：`setMoldBindKind()`（二维码 / RFID 二选一）随标签类型筛选一并删除。 */
+/* 机器筛选：只重建「模具编码」下拉与结果体，筛选行自身不重建
+   （重建会让刚点开的下拉锚点失效）。
+   R180：车间那一维删除，本函数只剩 machine 一个合法 key。 */
 function setMoldBindFilter(key,val){
-  if(key!=='ws'&&key!=='machine') return;
+  if(key!=='machine') return;
   closeDropdown(true);
   moldBindState[key]=val;
-  /* 换筛选后原来选中的感应标签可能已不在时间段 / 车间范围内 → 一并丢掉，
+  /* 换筛选后原来选中的感应标签可能已不在时间段 / 机器范围内 → 一并丢掉，
      免得选择器停在一个「按现在的条件根本看不到」的标签上（R78）。 */
   moldBindState.scan='';
-  /* 换车间 / 机器后原来的模具可能已不在候选集里 → 退回该条件下第一块模具
+  /* 换机器后原来的模具可能已不在候选集里 → 退回该条件下第一块模具
      （查询页允许「全部模具」，保持不动）。 */
   if(moldBindState.tab!=='query'){
     const list=moldBindUnits().filter(function(u){
@@ -15846,20 +15786,14 @@ function setMoldBindFilter(key,val){
   }
   moldBindPaint();
 }
-function openMoldWsSelect(el){
-  el._sel=moldBindState.ws;
-  openDropdown(el,[{v:'',t:'全部车间'}].concat(MOLD_WORKSHOPS.map(function(w){return {v:w,t:w};})),
-    false,function(v){setMoldBindFilter('ws',v);},null);
-}
 function openMoldMachineSelect(el){
   el._sel=moldBindState.machine;
   openDropdown(el,[{v:'',t:'全部机器'}].concat(MOLD_MACHINE_LIST.map(function(m){return {v:m,t:m};})),
     false,function(v){setMoldBindFilter('machine',v);},null);
 }
-/* 整层重画（页签高亮 + 筛选行 + 结果体）：只在「打开面板 / 切页签 / 切标签类型」这类
-   离散动作后调用。
+/* 整层重画（页签高亮 + 筛选行 + 结果体）：只在「打开面板 / 切页签」这类离散动作后调用。
    ★ 绝不在输入过程中调用——输入框会被新节点替换，焦点、光标、已敲的字符全部丢失。
-   ★ 也不在「选车间 / 机器 / 时间段 / 模具」之后调用：那三处只改 .dv 文本 + 刷结果体，
+   ★ 也不在「选机器 / 时间段 / 模具」之后调用：那三处只改 .dv 文本 + 刷结果体，
      否则刚点开的下拉会被连同锚点一起重建。
    R79：筛选行已在**页头卡片**里（与页签同行），结果体只剩一个容器；页头统计整块删除。 */
 function moldBindPaint(){
@@ -15874,51 +15808,36 @@ function moldBindRefreshBody(){
   const box=document.getElementById('moldBindBody');
   if(box) box.innerHTML=moldBindBodyHtml();
 }
-/* 筛选条件行（R78；R79 移到页头与页签同行、并收成紧凑布局）：
-   车间 / 机器 / 时间段三个下拉 —— 它们现在在**页签左边**，页签靠右。
-   时间段只对 RFID 有意义（二维码不产生感应记录），但仍常显：它是三个并列的筛选维度之一，
-   按标签类型隐藏会让筛选行在切类型时跳动。
-   ⚠ 紧凑化只压缩了控件宽度与标签字号（见 CSS .mold-bind-filters），
+/* 筛选条件行（R78；R79 移到页头与页签同行；R180 定为「机器 / 模具编码 / 时间段」）：
+   三个下拉在**页签左边**、严格一行，页签靠右（margin-left:auto）。
+   ★ 控件前不再有文字说明（需求「去除筛选条件框前面的文字说明」）：
+     机器框里写「全部机器 / 1#制粒」、模具框里写台账标签、时间框里写区间，
+     取值本身就说明了自己是什么，再挂一个标签只是占掉 200+px 的可用宽度。
+   ★ 顺序是硬口径（需求「模具筛选条件移动到机器筛选条件后」）：机器 → 模具编码 → 时间段。
+     模具编码从「查询页的查询行」上移成常驻条件 —— 它现在对三个页签都生效，
+     绑定 / 解绑页也用它换模具（原来那处信息框顶行的 #moldBindSelect 已撤销，
+     ⚠ 同一 id 任何时刻只能有一个节点，这也是必须合并成一处的另一个理由）。
+   ⚠ 紧凑化只压缩了控件宽度（见 CSS .mold-bind-filters），
      没有减小控件高度 —— 44px 是这一排（含页签）的统一高度，破掉就会高低不齐。 */
 function moldBindFilterHtml(){
   const st=moldBindState;
-  const timeHint=st.kind==='rfid'?'':' title="二维码不产生感应记录，时间段仅用于 RFID 标签"';
-  return '<span class="ql">车间</span>'+
-    '<div class="f-input mold-info-f" id="moldWsSelect" onclick="openMoldWsSelect(this)">'+
-      '<span class="dv">'+(st.ws||'全部车间')+'</span><span class="arrow">▾</span></div>'+
-    '<span class="ql">机器</span>'+
-    '<div class="f-input mold-info-f" id="moldMachineSelect" onclick="openMoldMachineSelect(this)">'+
+  return '<div class="f-input mold-info-f" id="moldMachineSelect" onclick="openMoldMachineSelect(this)">'+
       '<span class="dv">'+(st.machine||'全部机器')+'</span><span class="arrow">▾</span></div>'+
-    '<span class="ql">时间段</span>'+
-    '<div class="f-input mold-info-f" id="moldTimeSelect" onclick="openMoldScanRange()"'+timeHint+'>'+
+    '<div class="f-input mold-info-f mold-code-f" id="moldBindSelect" onclick="openMoldBindSelect(this)">'+
+      '<span class="dv">'+moldBindLabel(st.code)+'</span><span class="arrow">▾</span></div>'+
+    '<div class="f-input mold-info-f" id="moldTimeSelect" onclick="openMoldScanRange()">'+
       '<span class="dv">'+moldScanRangeText(st.from,st.to)+'</span><span class="arrow">▾</span></div>';
 }
-/* 三页共用的口径说明文案。
-   ⚠ 长度是**有上限**的：在「查询」页它仍是查询行里最后一个 flex 项（margin-left:auto 贴右），
-     一行放不下就整体换行，把查询行从 44px 撑到 74px（R78 实测过）。所以一律用短句。
-   R79：绑定 / 解绑两页的这句改挂在信息框底部（.mp-note），不再占查询行。 */
+/* 绑定 / 解绑两页共用的口径说明文案（挂在信息框底部 .mp-note）。
+   R180：查询页没有信息框，也不再有自己的查询行 —— 这句只在信息框里出现，
+     所以不必再为「查询行一行放不下会换行」担心（R78 踩过：那句话把行从 44px 撑到 74px）。 */
 function moldBindRuleText(){
-  const st=moldBindState;
-  if(st.tab==='unbind') return '仅可选择<b>已绑定</b>标签的模具';
-  if(st.tab==='query') return '按车间 / 机器 / 时间段 / 模具编码查询标签的绑定与感应信息';
-  return st.kind==='rfid'
-    ? '最多 <b>3</b> 个 RFID 标签 · 从下方「感应标签」下拉选择'
-    : '只能绑定 <b>1</b> 个二维码 · 扫码或手输后确定绑定';
+  if(moldBindState.tab==='unbind') return '仅可选择<b>已绑定</b>标签的模具';
+  return '最多 <b>'+MOLD_RFID_MAX+'</b> 个 RFID 标签 · 从下方「感应标签」下拉选择';
 }
-/* 「查询」页的查询行（模具编码 + 标签类型 + 口径说明）。
-   R79：绑定 / 解绑两页的这两个控件已移入信息框（.mold-profile）顶行，本行只在查询页出现 ——
-   查询页没有唯一的「当前模具」，套信息框会把「全部模具」硬塞进一个「某块模具」的外壳里。 */
-function moldBindQueryHtml(){
-  const st=moldBindState;
-  return '<span class="ql">模具编码</span>'+
-    '<div class="f-input mold-ledger-select" id="moldBindSelect" onclick="openMoldBindSelect(this)">'+
-      `<span class="dv">${moldBindLabel(st.code)}</span><span class="arrow">▾</span></div>`+
-    '<span class="ql">标签类型</span>'+
-    '<div class="mold-kind-seg">'+MOLD_BIND_KINDS.map(function(k){
-      return `<button class="${st.kind===k.v?'on':''}" onclick="setMoldBindKind('${k.v}')">${k.t}</button>`;
-    }).join('')+'</div>'+
-    '<span class="mold-bind-rule">'+moldBindRuleText()+'</span>';
-}
+/* R180：`moldBindQueryHtml()`（查询页的「模具编码 + 标签类型 + 口径说明」查询行）整块删除。
+   模具编码已上移到页头筛选行、标签类型下线，查询页的正文直接从感应记录列表开始 ——
+   查询页不再有任何「只在这一页出现」的查询条件，行也就没有存在的必要。 */
 /* 时间段文案：同日只写一次日期（「08-26 13:09 ~ 15:09」），跨日两端都写全 */
 function moldScanRangeText(from,to){
   const a=String(from||''),b=String(to||'');
@@ -15991,14 +15910,12 @@ function moldScanByTag(tag){
   });
   return hit;
 }
-/* 当前筛选条件（车间 / 机器 / 时间段）下的感应记录，按开始时刻倒序。
-   车间这里的推法**与模具下拉不同**：模具按「模具类型」推车间（闲置模具也有归属），
-   感应记录则只能按「它出现在哪台主机的读写器上」推 —— 两条口径各自都是它那份数据
-   唯一能自洽的推法，强行统一反而会给其中一个制造假的归属。 */
+/* 当前筛选条件（机器 / 时间段）下的感应记录，按开始时刻倒序。
+   R180：车间筛选下线 —— 这个函数与模具下拉的取数口径现在完全一致（只看机器），
+     不再存在「模具按类型推车间、感应记录按主机推车间」那两套口径的差异。 */
 function moldScanRecords(){
   const st=moldBindState;
   return MOLD_RFID_SCANS.filter(function(sc){
-    if(st.ws&&moldWorkshopOfMachine(sc.machine)!==st.ws) return false;
     if(st.machine&&sc.machine!==st.machine) return false;
     return moldScanInRange(sc,st.from,st.to);
   }).sort(function(a,b){return moldScanTs(b.from)-moldScanTs(a.from);});
@@ -16044,18 +15961,18 @@ function openMoldScanSelect(el){
 function moldScanPick(tag){
   if(!moldScanByTag(tag)) return;
   moldBindState.scan=tag;
-  moldBindSecRefresh('rfid');
+  moldBindSecRefresh();
 }
 function clearMoldScan(){
   moldBindState.scan='';
-  moldBindSecRefresh('rfid');
+  moldBindSecRefresh();
 }
-/* 只重建某一类标签区（cancelMoldTag 用的同一手法）：
-   整块刷新会把别处正在输入的内容顶掉，而这里只动了 rfid 那一格。 */
-function moldBindSecRefresh(kind){
-  const sec=document.getElementById('moldBindSec-'+kind);
+/* 只重建 RFID 标签区（R180 起只有这一格，参数也一并去掉）：
+   整块刷新会把别处的内容顶掉（例如筛选行里正在展开的下拉），而这里只动标签区这一格。 */
+function moldBindSecRefresh(){
+  const sec=document.getElementById('moldBindSec-rfid');
   const u=MOLD_UNIT_BY_CODE[moldBindState.code];
-  if(sec&&u) sec.outerHTML=moldBindSecHtml(u,kind);
+  if(sec&&u) sec.outerHTML=moldBindSecHtml(u);
   else moldBindRefreshBody();
 }
 /* 感应信息块（需求：显示感应的时间段、信号平均强度等信息）。
@@ -16082,29 +15999,9 @@ function moldScanInfoBlockHtml(sc){
     '<div class="si"><span class="k">当前归属</span>'+own+'</div>'+
     '</div>';
 }
-/* 信息查询页 · 二维码扫描信号（R79 重做）。
-   R78 这里列的是「已绑定的二维码」（其实是绑定台账的另一个视图）；
-   R79 需求要的是**扫描信号**：谁在读码器上被读到、什么时刻、当时装在哪台主机上。
-   所以数据源换成 MOLD_QR_SCANS，二维码是否关联模具由 moldTagOwner 实时推导。 */
-function moldQueryQrHtml(){
-  const st=moldBindState;
-  const list=moldQrScanRecords();
-  if(!list.length){
-    return '<div class="mold-ledger-none">当前筛选条件下没有二维码扫描信号<br>'+
-      '<span style="font-size:14px">可放宽时间段 / 车间 / 机器，或把「模具编码」改为「全部模具」</span></div>';
-  }
-  return '<div class="mold-scan-list">'+list.map(function(sc){
-    return '<div class="mold-scan-row">'+
-      '<span class="k"><span class="mold-bind-kind k-qr">二维码</span></span>'+
-      '<span class="v"><b>'+sc.code+'</b>'+
-        '<i>'+moldOwnerLine(sc.code,sc.machine)+'</i></span>'+
-      '<span class="at">'+String(sc.at).slice(5)+'</span>'+
-      '</div>';
-  }).join('')+'</div>'+
-  '<div class="mold-bind-tip">共 <b>'+list.length+'</b> 条二维码扫描信号 · 时间点为读码器读到该码的时刻'+
-    '（二维码是一物一码的点读，没有时间段与信号强度）</div>';
-}
-/* 信息查询页 · RFID 感应信号（R79 扩充）。
+/* R180：`moldQueryQrHtml()`（查询页的二维码扫描信号列表）随二维码类型整体下线，
+   数据源 `MOLD_QR_SCANS` / 取数 `moldQrScanRecords()` 也已删除。 */
+/* 信息查询页 · RFID 感应信号（R79 扩充；R180 起是查询页唯一的内容）。
    每行回答四件事：读到的是哪个标签、它关联哪块模具、在哪台主机上、哪一段时间（+ 平均强度）。
    点「详情」展开**该时间段的逐次读取明细**（R79 需求）。 */
 function moldQueryRfidHtml(){
@@ -16153,30 +16050,24 @@ function moldScanDetailHtml(sc){
       moldRssiQuality(sc.avg).text+'）· 明细由该会话的起止时刻与强度区间确定性重现</div>'+
     '</div>';
 }
-function moldQueryBodyHtml(){
-  return moldBindState.kind==='rfid'?moldQueryRfidHtml():moldQueryQrHtml();
-}
+/* R180：`moldQueryBodyHtml()`（按标签类型分派）删除 —— 只剩 RFID 一种查询结果，
+   `moldBindBodyHtml()` 直接产出 moldQueryRfidHtml()。 */
 /* 展开 / 收起某一条感应记录的明细。key = 标签 + 起始时刻（见 moldScanKey） */
 function toggleMoldQueryRow(key){
   moldBindState.qopen=moldBindState.qopen===key?'':key;
   moldBindRefreshBody();
 }
 
-/* 选中模具的信息框（绑定 / 解绑两页共用；R79 重做）。
+/* 选中模具的信息框（绑定 / 解绑两页共用；R79 重做，R180 收掉顶行）。
    R52~R78 这里是一行 .mold-ledger-meta，把状态 / 参数 / 主机 / 投用 / 累计产量 / 钢印 /
    已绑定数 / 供应商 / 保底产量**全塞在一行**里（现场反馈「信息显示比较混乱」）。
-   R79 按需求重排：
-     · 顶行 = 标签类型（靠左）+ 模具编码（靠右）—— 这两个控件从查询行搬进来，
-       它们决定下面「能加什么、加在哪块模具上」，放在信息框顶部才算把上下文说清；
-     · 关键信息 4 格 = 当前状态 / 当前主机 / 已绑二维码 / 已绑 RFID
-       （「已绑定信息区分二维码和 RFID 标签」落在这两格，各自给出 分子/上限）；
-     · 次级元信息 = 投用 / 产量 / 钢印 / 保底 / 位置 / 供应商 的 key-value 网格；
-     · 底部小字 = 本页口径（原来贴在查询行末尾的 rule）。
-   ⚠ 信息框顶部那个 #moldBindSelect 与「查询」页查询行里的**同一个 id**：
-     两处互斥（绑定 / 解绑走信息框，查询页走查询行），任何时刻页面上只会有一个。 */
+   R79 按需求重排成「顶行控件 → 关键信息 4 格 → 次级元信息网格 → 口径小字」。
+   ---- R180 ----
+     · 顶行的两个控件都撤了：标签类型下线、模具编码上移到页头筛选行（对三页统一生效）；
+       信息框现在直接从「关键信息」开始 —— 它是「这块模具怎么样」，不是「选什么」。
+     · 关键信息 3 格 = 当前状态 / 当前主机 / 已绑 RFID（二维码那格随类型删除）。
+     · 底部小字仍是本页口径（moldBindRuleText）。 */
 function moldBindProfileHtml(u){
-  const st=moldBindState;
-  const qr=moldBindSecItems(u.code,'qr').length;
   const rf=moldBindSecItems(u.code,'rfid').length;
   const kv=[
     ['投用日期',u.enter||'—'],
@@ -16187,20 +16078,9 @@ function moldBindProfileHtml(u){
     ['供应商',u.supplier||'—']
   ];
   return '<div class="mold-profile">'+
-    '<div class="mp-head">'+
-      '<span class="ql">标签类型</span>'+
-      '<div class="mold-kind-seg">'+MOLD_BIND_KINDS.map(function(k){
-        return `<button class="${st.kind===k.v?'on':''}" onclick="setMoldBindKind('${k.v}')">${k.t}</button>`;
-      }).join('')+'</div>'+
-      '<span class="ql mp-code-lab">模具编码</span>'+
-      '<div class="f-input mold-ledger-select mp-code" id="moldBindSelect" onclick="openMoldBindSelect(this)">'+
-        '<span class="dv">'+moldBindLabel(u.code)+'</span><span class="arrow">▾</span></div>'+
-    '</div>'+
     '<div class="mp-facts">'+
       '<div class="mp-fact"><span class="k">当前状态</span><span class="v chips">'+moldStatusChip(u)+'</span></div>'+
       '<div class="mp-fact"><span class="k">当前主机</span><b class="v">'+(u.machine||'未上机')+'</b></div>'+
-      '<div class="mp-fact"><span class="k">已绑二维码</span><b class="v'+(qr>=MOLD_QR_MAX?' full':'')+'">'+
-        qr+' <em>/ '+MOLD_QR_MAX+'</em></b></div>'+
       '<div class="mp-fact"><span class="k">已绑 RFID</span><b class="v'+(rf>=MOLD_RFID_MAX?' full':'')+'">'+
         rf+' <em>/ '+MOLD_RFID_MAX+'</em></b></div>'+
     '</div>'+
@@ -16210,11 +16090,11 @@ function moldBindProfileHtml(u){
     '<div class="mp-note">'+moldBindRuleText()+'</div>'+
     '</div>';
 }
-/* 单个标签区（二维码 1 格 / RFID 3 格）。id 固定为 moldBindSec-<kind>：
-   取消输入时只重建这一格，另一格里正在输入的内容不受影响。 */
-function moldBindSecHtml(u,kind){
-  const m=moldBindSecMeta(kind);
-  const items=moldBindSecItems(u.code,kind);
+/* 单个标签区（R180：只有 RFID 一种，3 格）。id 固定为 moldBindSec-rfid：
+   部分刷新（选中 / 取消感应标签）只重建这一格，不整块重绘。 */
+function moldBindSecHtml(u){
+  const m=moldBindSecMeta();
+  const items=moldBindSecItems(u.code,'rfid');
   const full=items.length>=m.max;
   const rows=items.length
     ? items.map(function(b){
@@ -16224,20 +16104,15 @@ function moldBindSecHtml(u,kind){
     : '<div class="mold-tag-none">尚未绑定</div>';
   const add=full
     ? '<div class="mold-tag-full">已达上限（'+m.max+' 个）· 如需更换请到「解绑」先解除原绑定</div>'
-    : (m.isQr?moldQrAddHtml():moldRfidAddHtml());
-  return '<div class="mold-bind-sec" id="moldBindSec-'+kind+'">'+
+    : moldRfidAddHtml();
+  return '<div class="mold-bind-sec" id="moldBindSec-rfid">'+
     '<div class="mold-bind-sec-hd"><span class="t">'+m.title+'</span>'+
       '<span class="c'+(full?' full':'')+'">'+items.length+'/'+m.max+'</span></div>'+
     '<div class="mold-tag-list">'+rows+'</div>'+
-    '<div class="mold-tag-slot" id="moldTagSlot-'+kind+'">'+add+'</div>'+
+    '<div class="mold-tag-slot">'+add+'</div>'+
     '</div>';
 }
-/* 二维码的入口：扫码 / 手输（沿用 R52）。
-   二维码是「一物一码」，值由制码系统生成，现场没有「从一堆码里挑一个」的语义 ——
-   所以这一侧**不做**下拉选择，只留一个输入行。 */
-function moldQrAddHtml(){
-  return `<button class="mold-add-btn" onclick="startMoldTagInput('qr')">＋ 绑定二维码</button>`;
-}
+/* R180：`moldQrAddHtml()`（＋ 绑定二维码的入口）随二维码类型删除。 */
 /* RFID 的入口（R78 需求：标签从「筛选时间段内感应到的标签」下拉里选）。
    之所以不再手输：RFID 标签贴在金属模具内壁，编号印在油污面上基本看不清，
    现场唯一的可靠来源就是读写器刚读到的那一串 —— 手输既慢又几乎必错。
@@ -16263,28 +16138,26 @@ function moldScanPickedHtml(tag){
       '<button class="mold-ledger-btn ghost" onclick="clearMoldScan()">取消</button>'+
     '</div>';
 }
-/* 标签区（R78：二维码 / RFID 二选一，只渲染当前 kind 那一格）。
-   R52 起这里是两格并排（`.mold-bind-grid` 两列），R78 按需求收成单栏：
-   并排会让人在同一屏里同时看到两类标签，反而模糊了「我这一趟在动哪一类」；
-   而切类型只点一下分段控件，成本极低。容器保留 .mold-bind-grid 不动（单列），
-   使「标签区外框」的结构与旧版一致，改的是列数不是骨架。 */
+/* 标签区容器（R78 起单列，R180 只剩 RFID 一格）。
+   容器保留 .mold-bind-grid 不动：它在栅格里承担「标签区外框」的结构位置，
+   单列时与直接放一个 .mold-bind-sec 视觉一致，但保留了将来并排扩展的骨架。 */
 function moldBindSlotsHtml(u){
-  return '<div class="mold-bind-grid">'+moldBindSecHtml(u,moldBindState.kind)+'</div>';
+  return '<div class="mold-bind-grid">'+moldBindSecHtml(u)+'</div>';
 }
 /* 解绑页：已绑定标签逐条列出，每条一个「解绑」。
    与绑定页的区别是职责——这一页只解不增，所以不出现任何「＋」按钮。
-   R78：只列**当前标签类型**那一类（与绑定页的二选一保持一致）——
-   一页里混着二维码和 RFID 时，「解绑」按钮要对着哪一条点会变得含糊。 */
+   R180：标签类型只剩 RFID，不再按类型过滤（原来那句「只列当前标签类型」随二选一下线）。 */
 function moldUnbindListHtml(u){
-  const m=moldBindSecMeta(moldBindState.kind);
-  const list=moldBindOf(u.code).filter(function(b){return b.kind===moldBindState.kind;});
+  const m=moldBindSecMeta();
+  const list=moldBindOf(u.code);
   if(!list.length){
     return '<div class="mold-ledger-none">该模具当前没有已绑定的'+m.title+'<br>'+
-      '<span style="font-size:14px">可切换上方「标签类型」，或从「模具编码」下拉另选一块模具</span></div>';
+      '<span style="font-size:14px">可从上方「模具编码」下拉另选一块模具</span></div>';
   }
   return '<div class="mold-bind-list">'+list.map(function(b,i){
-    /* 下标必须按**全量**数组算：unbindMoldTag 用的是 MOLD_BINDINGS[code] 的原始下标，
-       这里若用过滤后的下标，解绑的会是另一条（二选一过滤后这个坑才出现）。 */
+    /* 下标按**全量**数组算：unbindMoldTag 用的是 MOLD_BINDINGS[code] 的原始下标。
+       （R180 之后 list 已是全量、不再过滤，这条换算仍保留 —— 它让「过滤」将来若回来
+         也不会退化成解错一条。） */
     const gi=moldBindOf(u.code).indexOf(b);
     const mm=moldBindSecMeta(b.kind);
     return '<div class="mold-bind-row">'+
@@ -16298,131 +16171,40 @@ function moldUnbindListHtml(u){
 }
 function moldBindBodyHtml(){
   const st=moldBindState;
-  /* 信息查询页可以「不限定模具」（__ALL__），没有唯一的 u，所以先于 u 的存在性判断分流。
-     R79 起查询行只在查询页出现，且它由本函数一并产出（#moldBindQuery 容器已撤销）。 */
-  if(st.tab==='query') return '<div class="mold-bind-query">'+moldBindQueryHtml()+'</div>'+moldQueryBodyHtml();
+  /* 查询页可以「不限定模具」（__ALL__），没有唯一的 u，所以先于 u 的存在性判断分流。
+     R180：查询页没有查询行，正文就是感应记录列表。 */
+  if(st.tab==='query') return moldQueryRfidHtml();
   const u=MOLD_UNIT_BY_CODE[st.code];
   if(!u){
-    return '<div class="mold-bind-query">'+moldBindQueryHtml()+'</div>'+
-      '<div class="mold-ledger-none">'+
+    return '<div class="mold-ledger-none">'+
       (st.tab==='unbind'?'当前没有已绑定标签的模具':'该模具已不在台账中')+
       '<br><span style="font-size:14px">请从上方的「模具编码」下拉重新选择</span></div>';
   }
   return moldBindProfileHtml(u)+
     (st.tab==='unbind'?moldUnbindListHtml(u):moldBindSlotsHtml(u));
 }
-/* 就地插入标签输入行，**不做整块重绘**：
-   ⚠ 一旦重绘，正在输入的 <input> 会被新节点顶掉——焦点、光标位置、刚敲进去的字符全部丢失，
-     触屏上的表现是「刚点上去、还没来得及扫，输入框就没了」。
-   所以这里用 createElement + appendChild 精确替换掉「＋」按钮那一格；
-   确认 / 取消时输入已经结束，才走整块刷新。 */
-function startMoldTagInput(kind){
-  /* R78 闸门①：RFID 的标签来源**只能是感应记录**，输入行是二维码专用的通道。
-     这不是「UI 上不给入口」——强开也必须被挡住，否则「RFID 标签必须来自感应」
-     就退化成一个口头约定，手输一个不存在的编号照样能绑上去。 */
-  if(kind==='rfid'){ toast('RFID 标签只能从「感应标签」下拉中选择'); return; }
-  const slot=document.getElementById('moldTagSlot-'+kind);
-  if(!slot) return;
-  if(document.getElementById('moldTagInput-'+kind)){
-    /* 已经开着就只把焦点放回去，不重复插入（连点两下不该出现两个输入框） */
-    const old=document.getElementById('moldTagField-'+kind);
-    if(old) old.focus();
-    return;
-  }
-  const m=moldBindSecMeta(kind);
-  const wrap=document.createElement('div');
-  wrap.className='mold-tag-input';
-  wrap.id='moldTagInput-'+kind;
-  wrap.innerHTML='<div class="ti-row"><span class="ti-label">'+m.title+'</span>'+
-    '<input class="ti-input" id="moldTagField-'+kind+'" type="text" autocomplete="off" '+
-    'placeholder="'+(m.isQr?'扫码或输入二维码内容，如 HD-QR-250365-0002'
-                          :'扫码或输入标签号，如 HD-RFID-9F2101')+'"></div>'+
-    '<div class="ti-actions">'+
-      '<button class="mold-ledger-btn" onclick="confirmMoldTag(\''+kind+'\')">确定绑定</button>'+
-      '<button class="mold-ledger-btn ghost" onclick="cancelMoldTag(\''+kind+'\')">取消</button>'+
-      '<button class="mold-ledger-btn ghost" onclick="fillMoldTagDemo(\''+kind+'\')">生成示例值</button>'+
-    '</div>';
-  slot.innerHTML='';
-  slot.appendChild(wrap);
-  const inp=document.getElementById('moldTagField-'+kind);
-  if(inp){
-    inp.focus();
-    /* 回车 = 确定。扫码枪结束就是一串字符 + 回车，这条监听是给枪用的；
-       键盘用户顺手敲回车也不会误触别的按钮。 */
-    inp.addEventListener('keydown',function(e){
-      if(e.key==='Enter'){e.preventDefault();confirmMoldTag(kind);}
-    });
-  }
-}
-/* 取消 = 丢弃本次输入，只重建本标签区（另一区若也开着输入框，不连带清掉） */
-function cancelMoldTag(kind){
-  const sec=document.getElementById('moldBindSec-'+kind);
-  const u=MOLD_UNIT_BY_CODE[moldBindState.code];
-  if(sec&&u) sec.outerHTML=moldBindSecHtml(u,kind);
-  else moldBindRefreshBody();
-}
-/* 原型没有真实扫码枪，「生成示例值」按类型产出一个当前未被占用的编号，
-   方便在纯触屏（无键盘）下把绑定流程走完。正式对接时删掉这个按钮即可，不影响主流程。 */
-let _moldTagSeq=0;
-function nextMoldTagValue(kind){
-  const pre=kind==='qr'?'HD-QR-DEMO-':'HD-RFID-DEMO-';
-  let v;
-  do{ _moldTagSeq++; v=pre+('000'+_moldTagSeq).slice(-4); }
-  while(moldTagOwner(v,'')&&_moldTagSeq<9999);
-  return v;
-}
-function fillMoldTagDemo(kind){
-  const inp=document.getElementById('moldTagField-'+kind);
-  if(!inp) return;
-  inp.value=nextMoldTagValue(kind);
-  inp.focus();
-  if(inp.select) inp.select();
-}
-/* 确定绑定：三道校验（上限 / 本模具重复 / 跨模具占用）任一不通过都**保持输入行不动**，
-   让用户能就地改一个字符重试，而不是把已扫到的内容清掉让人重扫一遍。 */
-function confirmMoldTag(kind){
-  /* R78 闸门①（与 startMoldTagInput 同一道）：RFID 走不了输入行这条路 */
-  if(kind==='rfid'){ toast('RFID 标签只能从「感应标签」下拉中选择'); return; }
-  const code=moldBindState.code;
-  const u=MOLD_UNIT_BY_CODE[code];
-  if(!u) return;
-  const m=moldBindSecMeta(kind);
-  const inp=document.getElementById('moldTagField-'+kind);
-  const v=inp?String(inp.value).trim():'';
-  if(!v){ toast('请先扫码或输入'+m.title+'内容'); if(inp) inp.focus(); return; }
-  const items=moldBindSecItems(code,kind);
-  if(items.length>=m.max){
-    toast(code+' 的'+m.title+'已达上限（'+m.max+' 个），请先解绑');
-    return;
-  }
-  if(items.some(function(b){return b.v===v;})){
-    toast('该标签已绑定在本模具上：'+v);
-    return;
-  }
-  const owner=moldTagOwner(v,'');
-  if(owner){
-    toast('该标签已绑定在模具 '+owner+' 上，请先解绑');
-    return;
-  }
-  ensureMoldBind(code).push({kind:kind,v:v,at:MOLD_UPDATED_AT,by:MOLD_BIND_OPERATOR});
-  toast('已为 '+code+' 绑定'+m.title+' '+v);
-  moldBindRefreshBody();
-}
-/* 确定绑定（RFID，R78）：值不再来自输入框，而是 state.scan（感应下拉选中的标签）。
-   三道校验与 confirmMoldTag **逐条一致**（上限 / 本模具重复 / 跨模具占用）——
-   两条路若校验不同，现场会得出「同一个标签有时候能绑有时候不能」这种无法解释的结论。 */
+/* R180：二维码手工输入那一条路整组删除 ——
+   `startMoldTagInput()`（就地插入 .mold-tag-input 输入行）、`cancelMoldTag()`、
+   `nextMoldTagValue()` / `fillMoldTagDemo()`（生成示例值）、`confirmMoldTag()`（手输确定绑定）。
+   RFID 从来不走这条路（R78 就有一道闸门拦住），二维码下线后整组函数没有调用方。
+   ⚠ 保留的历史经验别丢：这条路的实现是「就地插入，不整块重绘」——
+     一旦重绘，正在输入的节点被换掉，焦点 / 光标 / 已敲字符全丢，触屏上的表现是
+     「刚点上去、还没来得及扫，输入框就没了」。将来若再加手输类入口，仍要按这个做法写。 */
+/* 确定绑定（RFID，R78）：值来自 state.scan（感应下拉选中的标签）。
+   三道校验：上限 / 本模具重复 / 跨模具占用。
+   （R180 前这里与 `confirmMoldTag` 的手输路径逐条对齐；手输路下线后本函数就是唯一入口。） */
 function confirmMoldScan(){
   const code=moldBindState.code;
   const u=MOLD_UNIT_BY_CODE[code];
   const tag=moldBindState.scan;
   if(!u||!tag) return;
-  const m=moldBindSecMeta('rfid');
+  const m=moldBindSecMeta();
   const items=moldBindSecItems(code,'rfid');
   /* R78 闸门②：标签必须**真的出现在当前筛选条件的感应记录里**。
      拦这一道是为了「强开 state.scan」这种绕行——否则随便塞一个字符串进来照样能绑，
      而需求的原话是「通过筛选时间段范围内感应到的 RFID 标签选择」。 */
   if(!moldScanByTag(tag)){
-    toast('该标签不在当前时间段 / 车间 / 机器的感应记录中，请重新选择');
+    toast('该标签不在当前时间段 / 机器的感应记录中，请重新选择');
     return;
   }
   if(items.length>=m.max){
@@ -16568,16 +16350,17 @@ function moldhist_render(){
       </div>
     </div>`};
 }
-/* ============ 模具管理 · 信息管理（R77：原 R52 弹窗整页搬进 tab；R79 重排页头 + 重做信息框） ============
+/* ============ 模具管理 · 信息管理（R77 整页 tab；R79 重排页头 + 重做信息框；R180 收敛筛选维度） ============
    结构 = 页头卡片（筛选三控件 + 页签）+ 结果体卡片，与弹窗时代逐块对应，
    只换了宿主：没有 h3 标题（顶层 tab 条已写明「信息管理」）、没有右上角关闭按钮
    （切走 tab 即离开）、也不再需要「弹层内下拉要抬 z-index」那套（页面里没有弹层压在头上）。
-   ★ R79 页头重排：车间 / 机器 / 时间段三个筛选控件从结果体卡片上移到**页头卡片**，
-     与「绑定 / 解绑 / 查询」页签同处一行（筛选靠左、页签靠右 margin-left:auto）。
-     原来页头右侧那句「可选模具 N 块 · 已绑定标签 N 块」统计整块删除（需求点名去掉）。
-   ★ R79 结果体：`#moldBindQuery` 容器撤销 —— 绑定 / 解绑两页的「标签类型 + 模具编码」
-     改由信息框（.mold-profile）顶行承载，查询行只在「查询」页还需要；
-     所以整块结果体现在由 moldBindBodyHtml() 一个函数产出，moldBindPaint 只灌这一个容器。
+   ★ R79 页头重排：筛选控件从结果体卡片上移到**页头卡片**，与「绑定 / 解绑 / 查询」页签同处一行
+     （筛选靠左、页签靠右 margin-left:auto）。页头右侧那句「可选模具 N 块 · 已绑定标签 N 块」统计整块删除。
+   ★ R180 页头筛选 = 机器 / 模具编码 / 时间段，**去掉车间与控件前的文字说明**，
+     模具编码紧跟机器且三控件严格一行（需求 1）。
+   ★ R180 默认页签 = 查询（需求 3），所以进页第一屏就是感应记录列表。
+   ★ R180 标签类型筛选下线、二维码相关信息全部删除（需求 2）：
+     结果体只剩「RFID 标签区」/「解绑清单」/「RFID 感应记录列表」三种形态。
    ⚠ 内容不在本函数里生成：renderGroup 先 innerHTML 落地，再调 moldBindPaint() 灌入。 */
 function moldinfo_render(){
   return {title:'',html:`
