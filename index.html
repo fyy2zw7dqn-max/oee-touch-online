@@ -3888,6 +3888,10 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
       **未绑定**时保留（此时底部仍是原 .mold-bind-sec 卡片），已绑定的更换动作走「解绑」页。 */
 .mold-profile .mp-fact .mold-fact-at{font-size:12px;color:var(--t2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* R197：「最近使用主机」的时间段可能较长（月日时分～月日时分，含「生产中」），
+   用可换行版本，避免窄列被 nowrap 省略号截断。 */
+.mold-profile .mp-fact .mold-fact-host-at{font-size:12px;color:var(--t2);line-height:1.45;
+  white-space:normal;word-break:break-all;}
 .mold-profile .mp-fact .v.mold-fact-none{font-family:inherit;font-weight:600;font-size:16px;color:var(--t2);}
 /* 模具使用历史预览块：与 .mold-bind-sec 同级同框（边框 / 圆角 / 内距一致，视觉上是同一层卡片） */
 .mold-usage{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fff;}
@@ -3959,7 +3963,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-scan-info .si .v{font-size:15px;font-weight:700;color:var(--t1);font-family:var(--mono);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mold-scan-info .si .v.txt{font-family:inherit;}
-.mold-scan-actions{display:flex;gap:8px;margin-top:10px;}
+.mold-scan-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
 .mold-scan-actions .mold-ledger-btn{height:40px;font-size:15px;}
 /* 信号强度四级配色：优（绿）/ 良（蓝）/ 一般（橙）/ 弱（红）。
    与「运行参数」页判读电流好坏的方向一致 —— 绿的放心、红的要处理。 */
@@ -16375,6 +16379,14 @@ function toggleMoldQueryRow(key){
      · 关键信息 3 格 = 当前状态 / 当前主机 / 已绑 RFID（二维码那格随类型删除）。
      · 底部小字仍是本页口径（moldBindRuleText）。 */
 function moldBindProfileHtml(u,actionsHtml){
+  /* R197：中间关键格由「当前主机」改为「最近使用主机」—— 显示该模具最近一次生产段
+     的主机 + 生产时间段（月日时分 ~ 月日时分），而非当前是否上机。
+     复用 moldUsageEntries 的首条生产记录；无生产记录（刚入库未上机）显示灰色占位。 */
+  const last=moldLastProdEntry(u.code);
+  const hostFact=last
+    ? '<b class="v">'+last.machine+'</b>'+
+      '<span class="mold-fact-host-at">'+last.text+'</span>'
+    : '<b class="v mold-fact-none">暂无使用记录</b>';
   /* R191：第 3 格由「已绑 RFID 计数」改为**绑定标签本体**（需求：绿框内容移到红框位置）。
      1:1 下计数没有信息量；标签号 + 绑定时间/操作人 才是现场要核对的两个值。 */
   const tag=moldBindOf(u.code)[0];
@@ -16400,7 +16412,7 @@ function moldBindProfileHtml(u,actionsHtml){
   return '<div class="mold-profile">'+
     '<div class="mp-facts">'+
       '<div class="mp-fact"><span class="k">当前状态</span><span class="v chips">'+moldStatusChip(u)+'</span></div>'+
-      '<div class="mp-fact"><span class="k">当前主机</span><b class="v">'+(u.machine||'未上机')+'</b></div>'+
+      '<div class="mp-fact"><span class="k">最近使用主机</span>'+hostFact+'</div>'+
       '<div class="mp-fact"><span class="k">绑定标签</span>'+fact3+'</div>'+
     '</div>'+
     '<div class="mp-kv">'+kv.map(function(r){
@@ -16563,6 +16575,16 @@ function moldUsageEntries(code){
     out.push({time:b.at,type:'bind',machine:'',text:'绑定标签 '+b.v+'<i> · 操作人 '+b.by+'</i>'});
   });
   return out.sort(moldTimeDesc);
+}
+/* R197：「最近使用主机」= 该模具最近一次生产段（按时间倒序后首条 type==='prod'）。
+   返回 {machine, text}（text 已是「月日时分 ~ 月日时分」，含「生产中」长尾）；
+   无任何生产记录（如刚入库未上机的模具）返回 null，调用方据此显示灰色占位。 */
+function moldLastProdEntry(code){
+  const all=moldUsageEntries(code);
+  for(let i=0;i<all.length;i++){
+    if(all[i].type==='prod') return all[i];
+  }
+  return null;
 }
 function moldUsageHistoryHtml(u){
   const all=moldUsageEntries(u.code);
