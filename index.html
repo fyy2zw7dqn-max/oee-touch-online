@@ -16374,7 +16374,7 @@ function toggleMoldQueryRow(key){
        信息框现在直接从「关键信息」开始 —— 它是「这块模具怎么样」，不是「选什么」。
      · 关键信息 3 格 = 当前状态 / 当前主机 / 已绑 RFID（二维码那格随类型删除）。
      · 底部小字仍是本页口径（moldBindRuleText）。 */
-function moldBindProfileHtml(u){
+function moldBindProfileHtml(u,actionsHtml){
   /* R191：第 3 格由「已绑 RFID 计数」改为**绑定标签本体**（需求：绿框内容移到红框位置）。
      1:1 下计数没有信息量；标签号 + 绑定时间/操作人 才是现场要核对的两个值。 */
   const tag=moldBindOf(u.code)[0];
