@@ -1043,6 +1043,11 @@ svg text.team-metric-link:hover{fill:#0066CC;}
   margin-right:14px; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fff;
   background:#fff; flex:0 0 24px;}
 .dropdown-item.selected .chk{background:var(--blue);}
+/* R198b：绑定页 RFID 下拉里「已绑定」标签的禁用态 —— 灰显、禁止点选（仅未绑定标签可勾选）。
+   opt-in：只有 moldScanOptions 给选项打了 disabled 才会命中，其余几十处下拉不受影响。 */
+.dropdown-item.disabled{color:var(--t2); cursor:not-allowed; opacity:.5;}
+.dropdown-item.disabled:hover,.dropdown-item.disabled:active{background:transparent; color:var(--t2);}
+.dropdown-item.disabled .chk{border-color:var(--border); background:#F2F4F7;}
 .dropdown-done{position:sticky;bottom:0;width:calc(100% - 20px);height:46px;margin:8px 10px 2px;border-radius:9px;background:var(--blue);color:#fff;font-size:17px;font-weight:700;box-shadow:0 -5px 14px rgba(255,255,255,.92);}
 /* 多选筛选面板右上角 × 关闭按钮
    R164（用户要求「下拉选择框的 X 按钮调大，便于触摸点击」）：30×30 → 44×44（= 输入框标准高，
@@ -3627,6 +3632,12 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-opt b{font-family:var(--mono);font-size:18px;font-weight:700;line-height:1.15;}
 .mold-opt i{font-style:normal;font-size:13px;font-weight:500;color:var(--t2);line-height:1.15;}
 .dropdown-item.selected .mold-opt b,.dropdown-item.selected .mold-opt i{color:var(--blue);}
+/* R199：绑定页 RFID 感应下拉 —— 绑定状态(未绑定 / 已绑在模具)从第三行移到标签信息右侧靠右放置。
+   仅作用于带 .mo-scan 的下拉项，不影响其它 .mold-opt（如信息管理模具下拉的两行(column)布局）。 */
+.mold-opt.mo-scan{display:flex;flex-direction:row;align-items:center;gap:12px;justify-content:flex-start;}
+.mold-opt.mo-scan .mo-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;}
+.mold-opt.mo-scan .mo-main i{white-space:normal;}
+.mold-opt.mo-scan i.own{flex:0 0 auto;align-self:center;white-space:nowrap;text-align:right;padding-left:12px;margin-left:auto;}
 /* ---- R185 信息管理 › 模具下拉：编码一行 + 属性一行 ----
    属性行 = 环模 Φ3.8 · 压缩比 1:6 · 已绑 1 个标签 · 主机 1#制粒（一整行，不再分段）。
    .dropdown-item 写死 height:60px 是单行 21px 的通用布局，两行内容约 49px + 内距 12px，
@@ -3826,7 +3837,6 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .mold-tag-v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--t1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mold-tag-at{font-size:13px;color:var(--t2);}
-.mold-tag-none{padding:7px 10px;border-radius:8px;background:#F7F8FA;color:var(--t2);font-size:14px;}
 /* 到上限时的提示：说清「为什么没有加号」并指明下一步去哪（解绑页），不留一个死掉的空行 */
 .mold-tag-full{padding:8px 10px;border-radius:8px;background:rgba(246,165,0,.12);color:#B97A00;
   font-size:13px;line-height:1.45;}
@@ -5305,10 +5315,11 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
       /* opt.cls：选项级修饰类（目前只有信息管理的模具下拉用，见 .mold-opt-item）。
          加在 .dropdown-item 自身而不是里面的 span 上 —— 固定 60px 行高是写在 .dropdown-item 上的，
          要改高度只能从这里下手。缺省为空串，旧调用方行为不变。 */
-      return `<div class="dropdown-item ${sel?'selected':''}${opt.cls?' '+opt.cls:''}" data-v="${opt.v}"><span class="chk">${sel?'✓':''}</span>${opt.t}</div>`;}).join('');
+      return `<div class="dropdown-item ${sel?'selected':''}${opt.cls?' '+opt.cls:''}${opt.disabled?' disabled':''}" data-v="${opt.v}"><span class="chk">${sel?'✓':''}</span>${opt.t}</div>`;}).join('');
   };
   const bindItems=()=>{
     panel.querySelectorAll('.dropdown-item').forEach(item=>{item.onclick=()=>{
+      if(item.classList.contains('disabled')) return;   /* R198b：已绑定标签不可勾选（绑定页口径） */
       const v=item.dataset.v;
       if(multi){
         if(!Array.isArray(anchorEl._sel))anchorEl._sel=[];
@@ -16070,6 +16081,11 @@ function moldBindPaint(){
   const f=document.getElementById('moldBindFilters');
   if(f) f.innerHTML=moldBindFilterHtml();
   moldBindRefreshBody();
+  /* R198：标签管理页三个筛选条件（机器 / 模具编码 / 时间段）在本函数内 innerHTML 落地，
+     而 renderGroup 中的 bindFilterTextScroll() 先于本函数执行，使这些 .dv 当时还不存在、
+     永远拿不到「文字超宽自动来回滚动」的兜底（已确认原因：标签管理模具筛选条件不能滚动显示）。
+     这里作为整层重画的统一出口再绑一次，覆盖初始渲染 + 切页签(setMoldBindTab) + 重置(resetMoldBindFilter) 全部路径。 */
+  bindFilterTextScroll();
 }
 function moldBindRefreshBody(){
   const box=document.getElementById('moldBindBody');
@@ -16221,15 +16237,15 @@ function moldScanRecords(){
   }).sort(function(a,b){return moldScanTs(b.from)-moldScanTs(a.from);});
 }
 /* 感应下拉的候选：一个标签只出一项（取最近一次会话），并标出归属。
-   已绑在本模具的标签**照列不误**（选中后由 confirmMoldScan 拦下并说明原因）——
-   直接从候选里删掉，现场会得出「我刚明明感应到了，列表里却没有」这种查不出原因的现象。 */
+   已绑定的标签**照列不误**（直接在选项上灰禁、不可勾选），保留可见性——
+   直接从候选里删掉，现场会得出「我刚明明感应到了，列表里却没有」这种查不出原因的现象。
+   ★ R198b：仅「未绑定」标签可勾选；排序 = 未绑定组在前、已绑定组在后，组内均按感应开始时刻倒序。 */
 function moldScanOptions(){
-  const seen={}, out=[];
+  const seen={}, map={};
   const cur=moldBindState.code;
   moldScanRecords().forEach(function(sc){
     if(seen[sc.tag]) return;
     seen[sc.tag]=1;
-    const q=moldRssiQuality(sc.avg);
     const owner=moldTagOwner(sc.tag,'');
     /* 归属单独占一行（第三行）：它决定这个标签能不能绑，必须一眼看见，
        挤在机器 / 时间段后面会被当成同一条描述而漏读。 */
@@ -16237,13 +16253,25 @@ function moldScanOptions(){
       ? (owner===cur?{cls:'self',txt:'已绑在本模具'}
                     :{cls:'other',txt:'已绑在模具 '+owner})
       : {cls:'free',txt:'未绑定'};
-    out.push({v:sc.tag,k:sc.tag+' '+sc.machine+' '+moldScanDurText(sc)+' '+q.text+' '+own.txt,
-      t:'<span class="mold-opt"><b>'+sc.tag+'</b>'+
-        '<i>'+sc.machine+' · '+moldShortTime(sc.from)+' 起 · 持续 '+moldScanDurText(sc)+
-        ' · 信号 '+sc.avg+' dBm（'+q.text+'）</i>'+
-        '<i class="own '+own.cls+'">'+own.txt+'</i></span>'});
+    map[sc.tag]={sc:sc,own:own};
   });
-  return out;
+  /* 分组：未绑定优先，组内按感应开始时刻倒序（最近先见） */
+  const free=[], bound=[];
+  Object.keys(map).forEach(function(tag){
+    const m=map[tag];
+    (m.own.cls==='free'?free:bound).push(m);
+  });
+  const byTimeDesc=function(a,b){return moldScanTs(b.sc.from)-moldScanTs(a.sc.from);};
+  free.sort(byTimeDesc); bound.sort(byTimeDesc);
+  return free.concat(bound).map(function(m){
+    const sc=m.sc, own=m.own, q=moldRssiQuality(sc.avg);
+    return {v:sc.tag,k:sc.tag+' '+sc.machine+' '+moldScanDurText(sc)+' '+q.text+' '+own.txt,
+      t:'<span class="mold-opt mo-scan"><span class="mo-main"><b>'+sc.tag+'</b>'+
+        '<i>'+sc.machine+' · '+moldShortTime(sc.from)+' 起 · 持续 '+moldScanDurText(sc)+
+        ' · 信号 '+sc.avg+' dBm（'+q.text+'）</i></span>'+
+        '<i class="own '+own.cls+'">'+own.txt+'</i></span>',
+      disabled: own.cls!=='free'};
+  });
 }
 function openMoldScanSelect(el){
   const opts=moldScanOptions();
@@ -16433,7 +16461,7 @@ function moldBindSecHtml(u){
         return '<div class="mold-tag"><span class="mold-tag-v">'+b.v+'</span>'+
           '<span class="mold-tag-at">绑定于 '+b.at+' · '+b.by+'</span></div>';
       }).join('')
-    : '<div class="mold-tag-none">尚未绑定</div>';
+    : '';
   const add=full
     ? '<div class="mold-tag-full">'+(m.max===1
         ? '已绑定 1 个标签（1:1 唯一绑定）· 更换请到「解绑」先解除原绑定'
