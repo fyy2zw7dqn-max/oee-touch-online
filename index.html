@@ -5349,7 +5349,7 @@ function openDropdown(anchorEl, options, multi, onSelect, onClose, searchCfg){
          这里再兜一层，防止以后新增的全局处理器把「点输入框」当成「点面板外」。 */
       inp.addEventListener('click',function(e){ e.stopPropagation(); });
       panel.querySelector('.dd-search-clear').addEventListener('click',function(e){
-        e.stopPropagation(); inp.value=''; ddQuery=''; paintList(); inp.focus();
+        e.stopPropagation(); inp.value=''; ddQuery=''; paintList();
       });
       /* 刻意不自动聚焦：这是 1280×1024 触摸端，一聚焦就弹软键盘、
          会把下半屏的候选列表盖住。浏览时不该被键盘挡，想搜索再点一下输入框。 */
