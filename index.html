@@ -16395,6 +16395,8 @@ function moldBindProfileHtml(u){
   const note=tag
     ? 'RFID 标签与模具 <b>1:1</b> 绑定 · 更换标签请到「解绑」页先解除原绑定'
     : moldBindRuleText();
+  /* R196：actionsHtml 为可选参数 —— 详情子页面的操作按钮（解绑 / 绑定）内嵌到本信息块底部、
+     靠右排布，而不是甩在卡片外另起一条操作条。主视图（选中具体模具）调用时不传，按钮不出现。 */
   return '<div class="mold-profile">'+
     '<div class="mp-facts">'+
       '<div class="mp-fact"><span class="k">当前状态</span><span class="v chips">'+moldStatusChip(u)+'</span></div>'+
@@ -16405,6 +16407,7 @@ function moldBindProfileHtml(u){
       return '<div class="mp-kvi"><span class="k">'+r[0]+'</span><b class="v">'+r[1]+'</b></div>';
     }).join('')+'</div>'+
     '<div class="mp-note">'+note+'</div>'+
+    (actionsHtml?'<div class="mold-subpage-actions">'+actionsHtml+'</div>':'')+
     '</div>';
 }
 /* 单个标签区（R180：只有 RFID 一种，3 格）。id 固定为 moldBindSec-rfid：
@@ -16650,12 +16653,13 @@ function moldDetailPageHtml(u){
   const act=st.tab==='unbind'
     ? '<button class="mold-ledger-btn" onclick="unbindMoldTag(\''+u.code+'\',0)">解绑</button>'
     : '<button class="mold-ledger-btn" onclick="moldDetailGoBind(\''+u.code+'\')">绑定</button>';
+  /* R196：按钮内嵌到档案信息块内部（moldBindProfileHtml 的 actionsHtml 参数），
+     不再作为卡片外的独立操作条；靠右排布由 .mold-subpage-actions 的 flex-end 负责。 */
   return '<div class="mold-subpage-hd">'+
       '<button class="mold-ledger-btn ghost" onclick="closeMoldDetailPage()">« 返回</button>'+
       '<b>模具详情 · '+u.code+'</b>'+
     '</div>'+
-    moldBindProfileHtml(u)+
-    '<div class="mold-subpage-actions">'+act+'</div>';
+    moldBindProfileHtml(u,act);
 }
 /* 详情视图里的「绑定」：退出详情并选中该模具 —— 正文落到「感应标签 + 确定绑定」卡片，
    真正写绑定仍走那条路的闸门（标签必须在感应记录里、未被其它模具占用等）。 */
@@ -16778,9 +16782,9 @@ function moldCfHtml(){
             '<span class="sub">　操作人 '+b.by+'</span></b></div>'+
         '</div>'+
         '<div class="mold-cf-warn">解绑后该标签与 <b>'+cf.code+'</b> 的绑定关系即被解除，标签可重新绑定到其它模具。</div>'+
-      '</div>'+
-      '<div class="mold-subpage-actions">'+backBtn+
-        '<button class="mold-ledger-btn" onclick="doUnbindMoldTag(\''+cf.code+'\','+cf.idx+')">确认解绑</button></div>';
+        '<div class="mold-subpage-actions">'+backBtn+
+          '<button class="mold-ledger-btn" onclick="doUnbindMoldTag(\''+cf.code+'\','+cf.idx+')">确认解绑</button></div>'+
+      '</div>';
   }
   /* 绑定确认（confirmMoldScan 四道闸门全过后进入；state 在页内视图等待期间不会变，
      落手前仍做一次兜底） */
@@ -16803,9 +16807,9 @@ function moldCfHtml(){
         '<div class="si"><span class="k">平均信号强度</span><b class="v q-'+q.lvl+'">'+sc.avg+' dBm · '+q.text+'</b></div>'+
       '</div>'+
       '<div class="mold-cf-warn">确认后该标签与 <b>'+code+'</b> 建立 1:1 唯一绑定；如需更换请先到「解绑」解除原绑定。</div>'+
-    '</div>'+
-    '<div class="mold-subpage-actions">'+backBtn+
-      '<button class="mold-ledger-btn" onclick="doConfirmMoldScan()">确认绑定</button></div>';
+      '<div class="mold-subpage-actions">'+backBtn+
+        '<button class="mold-ledger-btn" onclick="doConfirmMoldScan()">确认绑定</button></div>'+
+    '</div>';
 }
 function doUnbindMoldTag(code,idx){
   /* R195：页内视图 —— 清确认状态；解绑成功 = 模具转入「未绑」集合，详情视图一并退出 */
