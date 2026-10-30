@@ -4428,7 +4428,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
       </div></div>
     <div class="order-sub-toolbar"><button class="order-sound-btn" onclick="toast('异常提示声音已消除')">消除声音</button>
       <label class="order-check"><input type="checkbox" checked="" onchange="pageFilters.order.onlyAbnormal=this.checked;tablePaging.order.page=1;goPage('order')">只查看异常数据</label>
-      <span class="order-stat order-stat-key red">红色异常：0</span><span class="order-stat order-stat-key yellow">黄色异常：5</span><span class="order-stat order-stat-key unknown">未知状态：0</span>
+      <span class="order-stat order-stat-key red">红色异常：0</span><span class="order-stat order-stat-key yellow">黄色异常：5</span>
       <span class="order-stat">近7天异常条数：5</span><span class="order-stat">近15天异常条数：6</span>
       <button class="order-video-btn" onclick="openVideoGuide()">视频讲解</button></div>
     <div class="card bottom-table-card order-table-card"><div class="tbl-wrap">
@@ -13162,7 +13162,7 @@ function order_render(){
       </div></div>
     <div class="order-sub-toolbar"><button class="order-sound-btn" onclick="toast('异常提示声音已消除')">消除声音</button>
       <label class="order-check"><input type="checkbox" ${of.onlyAbnormal?'checked':''} onchange="pageFilters.order.onlyAbnormal=this.checked;tablePaging.order.page=1;goPage('order')">只查看异常数据</label>
-      <span class="order-stat order-stat-key red">红色异常：${rangeStats.red}</span><span class="order-stat order-stat-key yellow">黄色异常：${rangeStats.yellow}</span><span class="order-stat order-stat-key unknown">未知状态：${rangeStats.unknown}</span>
+      <span class="order-stat order-stat-key red">红色异常：${rangeStats.red}</span><span class="order-stat order-stat-key yellow">黄色异常：${rangeStats.yellow}</span>
       <span class="order-stat">近7天异常条数：${getOrderSevenDayAbnormalCount()}</span><span class="order-stat">近15天异常条数：${allStats.red+allStats.yellow+allStats.unknown}</span>
       <button class="order-video-btn" onclick="openVideoGuide()">视频讲解</button></div>
     <div class="card bottom-table-card order-table-card"><div class="tbl-wrap">
