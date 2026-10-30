@@ -2167,8 +2167,8 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .progress-data-table th:nth-child(1){width:18%;}.progress-data-table th:nth-child(2){width:26.5%;}
 .progress-data-table th:nth-child(3){width:35.5%;}.progress-data-table th:nth-child(4){width:20%;}
 #app.sidebar-collapsed .progress-data-table{min-width:100%;}
-.progress-data-table thead th{text-align:center;background:#D8F1FC;padding:10px 6px;line-height:19px;}
-.progress-data-table tbody td{padding:6px 8px;line-height:19px;text-align:center;vertical-align:middle;}
+.progress-data-table thead th{text-align:center;background:#D8F1FC;padding:10px 16px;line-height:19px;}
+.progress-data-table tbody td{padding:6px 16px;line-height:19px;text-align:center;vertical-align:middle;}
 .progress-data-table tbody tr{height:78px;}
 .progress-data-table tbody td.pg-prod{text-align:left!important;}
 .pg-semi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0 2px;}
@@ -3604,7 +3604,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
      撑高的是「模具参数 / 生产时间段」那两格的两行文字）；同一块模具同时命中两条异常时
      会叠到 4 行 ≈ 70px，表格自然把那一行撑高 —— 不做钳制：备注说清楚比行高齐整重要。 */
 .mold-abn-note{display:flex;flex-direction:column;gap:1px;font-size:12px;line-height:16px;
-  padding:2px 6px;border-radius:6px;background:rgba(225,25,45,.08);
+  padding:2px 6px;border-radius:6px;
   cursor:pointer;touch-action:pan-y;transition:transform .18s ease,opacity .18s ease;}
 /* 两行各自 nowrap + 省略号兜底：正常数据下最长的一行（「粒径不符」/「Φ2.0/Φ3.0」）都远小于
    列宽，省略号只是「日后接真数据别把列撑破」的保险，不是常态。
@@ -13833,6 +13833,29 @@ function dtApplyWidths(table,widths){
   applyOrderStickyCols(table);
   syncHistoryStickyLefts(table);
 }
+/* R202（用户要求「菜单栏展开/折叠表格都必须横向至少铺满，内容多可横向滚动」）：
+   dt-fixed 表格的列宽与 inline width 是按「增强当时」的容器宽分配/落定的，
+   之后侧栏折叠/展开、进出全屏、窗口缩放使容器变宽时表格仍是旧宽 ⇒ 右侧留白
+   （实测：展开态进入 history 表 963px → 折叠侧栏容器 1039px → 表格仍 963px，留 76px）。
+   此处统一兜底：渲染宽小于容器的表格，把差值补给最宽列，保证至少铺满；
+   内容本身超宽（列宽和 > 容器）不收缩，仍走容器横向滚动。
+   已被 min-width:100% 等比拉满的表（如 order-data-table）offsetWidth≈容器宽，自动跳过。
+   resize 由窗口缩放与侧栏/全屏切换的 dispatch 共同触发；延时 350ms 再跑一次，
+   覆盖侧栏 width .22s 过渡的尾巴。 */
+function dtRefitTables(){
+  document.querySelectorAll('#content .tbl-wrap table.dt-fixed').forEach(function(tb){
+    const wrap=tb.closest('.tbl-wrap'); if(!wrap) return;
+    const cw=wrap.clientWidth; if(cw<=0) return;
+    const gap=cw-tb.offsetWidth; if(gap<=2) return;
+    const cg=tb.querySelector('colgroup'); if(!cg||!cg.children.length) return;
+    const ws=Array.from(cg.children).map(function(c){ return parseFloat(c.style.width)||0; });
+    if(!ws.length||ws.some(function(w){ return !(w>0); })) return;
+    let mi=0; ws.forEach(function(w,i){ if(w>ws[mi]) mi=i; });
+    ws[mi]+=gap;
+    dtApplyWidths(tb,ws);
+  });
+}
+window.addEventListener('resize',function(){ dtRefitTables(); setTimeout(dtRefitTables,350); });
 /* 历史/损失表：前三列 sticky 的 left 必须等于实际列宽累加值，否则缩放/横向滚动时后列会压在前列上 */
 function syncHistoryStickyLefts(table){
   if(!table||!table.classList||!table.classList.contains('history-table')) return;
@@ -14040,7 +14063,15 @@ function dtEnhanceColumns(table){
     widths=[0.18,0.265,0.355,0.20].map(function(k){ return Math.round(_pw*k); });
     widths[2]+=_pw-widths.reduce(function(a,b){ return a+b; },0); /* 取整误差补到最宽列 */
   }
-  else if(saved&&saved.length===ths.length){ widths=saved.slice(); }
+  else if(saved&&saved.length===ths.length){
+    widths=saved.slice();
+    /* R202：拖拽保存的列宽总和可能小于当前容器（侧栏折叠态/换屏后进入页面）⇒ 差值补给最宽列，保证至少横向铺满 */
+    const _sv=table.closest('.tbl-wrap');
+    if(_sv){
+      const _sd=_sv.clientWidth-widths.reduce(function(a,b){ return a+b; },0);
+      if(_sd>2){ let _mi=0; widths.forEach(function(w,i){ if(w>widths[_mi]) _mi=i; }); widths[_mi]+=_sd; }
+    }
+  }
   else if(table.classList.contains('mold-table')&&ths.length===11){
     /* R49：模具台账最新状态表新增「备注」列（异常说明），与 order-data-table / history-table 一样手写固定列宽。
        不交给 dtAutoWidths 自由分配的原因有两条：
@@ -14236,7 +14267,7 @@ function render(p){
   content.classList.toggle('rm-layout',p==='ringmold');
   content.classList.remove('has-grp-tabs');
   content.classList.remove('has-mh-page');
-  content.innerHTML=title+c.html;bindTableSorting();syncTopRecordCounts();bindFilterTextScroll();mountFullscreenExit();updateFullscreenUI();
+  content.innerHTML=title+c.html;bindTableSorting();syncTopRecordCounts();bindFilterTextScroll();mountFullscreenExit();updateFullscreenUI();setTimeout(dtRefitTables,60);
   if(p==='ops'){netLiveSyncUI();if((ctx.opsTab||'andon')==='andon')andonAfterRender();}
   if(p==='ringmold'){rmBindAlert();rmRenderList();}}
 /* 分组页渲染：顶部 tab 条 + 当前 tab 对应页面内容 */
@@ -14281,7 +14312,7 @@ function renderGroup(gk){
   content.classList.toggle('rm-layout',tab.key==='ringmold');
   content.classList.add('has-grp-tabs');
   content.classList.toggle('has-mh-page',tab.key==='machine');
-  content.innerHTML=title+tabBar+c.html;bindTableSorting();syncTopRecordCounts();bindFilterTextScroll();mountFullscreenExit();updateFullscreenUI();
+  content.innerHTML=title+tabBar+c.html;bindTableSorting();syncTopRecordCounts();bindFilterTextScroll();mountFullscreenExit();updateFullscreenUI();setTimeout(dtRefitTables,60);
   const tm=document.getElementById('topMachines');
   if(tm)tm.textContent=(tab.key==='process')?(ctx.procMachine||'全部'):multiFilterText(ctx.machines.includes('全部')?[]:ctx.machines,'全部');
   if(tab.key==='ringmold'){rmBindAlert();rmRenderList();rmRenderBadge();}
