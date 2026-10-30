@@ -1588,7 +1588,7 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .mh-metrics{display:flex; align-items:baseline; justify-content:center; gap:22px; padding:1px 0 3px;}
 .mh-metric{display:flex; align-items:baseline; gap:6px; min-width:0;}
 .mh-mk{font-size:14px; color:var(--t2); white-space:nowrap;}
-.mh-mv{font-size:22px; font-weight:700; color:var(--t1); font-family:var(--mono); line-height:1.1;}
+.mh-mv{font-size:20px; font-weight:700; color:var(--t1); font-family:var(--mono); line-height:1.1;}
 .mh-mu{font-size:13px; font-weight:600; color:var(--t2);}
 /* 主机概览：超载电流阈值显示与超载判定 */
 .mh-metric-th .mh-mv{font-size:20px; color:#C2263A;}
@@ -2052,7 +2052,8 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 .shift-data-table th:nth-child(3){width:10%!important;}
 .shift-data-table th:nth-child(4){width:14%!important;}
 #app.sidebar-collapsed .shift-data-table th:nth-child(2){width:31%!important;}
-.order-data-table{min-width:1020px;}
+/* R203：原 min-width:1020px 已删 —— 列宽由 dt 增强 + dtRefitTables 精确补/收管理，
+   固定下限会阻止「容器变窄时收进可视区」（展开态 963px 会被撑回 1020 造成横滚）。 */
 .order-data-table th:nth-child(1){width:9%;}.order-data-table th:nth-child(2){width:15%;}.order-data-table th:nth-child(3){width:8%;}.order-data-table th:nth-child(4){width:11%;}.order-data-table th:nth-child(5){width:21%;}.order-data-table th:nth-child(6),.order-data-table th:nth-child(7){width:11%;}.order-data-table th:nth-child(8),.order-data-table th:nth-child(9){width:9%;}
 #app.sidebar-collapsed .order-data-table{min-width:100%;}
 #app.sidebar-collapsed .order-data-table th:nth-child(2){width:15%;}
@@ -2358,6 +2359,15 @@ svg text.team-metric-link:hover{fill:#0066CC;}
 
 /* 表格 */
 .tbl-wrap{overflow:auto; border-radius:14px;}
+/* R203（用户要求「所有表格页面上下滚动保持表头不动」）：全站表格表头吸顶。
+   页面表格的滚动容器统一是 .tbl-wrap（卡片内部滚动），th sticky top:0 即吸在其顶部。
+   用 ID 特异性覆盖 table.dt-fixed th{position:relative}，同时保留各表已有
+   左侧 sticky 列规则（history 前3列 / order 前4列 .dt-sticky-col）设置的 left ——
+   这些列表头由本规则补上 top，实现「吸顶 + 吸左」双向固定；
+   角部（既吸顶又吸左）的表头 z-index 抬到 7，横向滚动时不被右侧列盖住。 */
+#content .tbl-wrap thead th{position:sticky; top:0; z-index:5;}
+#content .tbl-wrap thead th.dt-sticky-col,
+#content .history-table thead th:nth-child(-n+3){z-index:7;}
 table{width:100%; border-collapse:collapse; font-size:20px;}
 table th,table td{vertical-align:middle;}
 /* 全局表格：固定布局 + 列宽自适应/拖拽 + 排序指示（默认灰、选中蓝） */
@@ -3191,7 +3201,7 @@ textarea{width:100%; height:120px; border:1.5px solid var(--border); border-radi
 .table-fill-page .tbl-wrap tbody td:last-child{border-radius:0 9px 9px 0;}
 .table-fill-page .tbl-wrap tbody td>span{max-height:2.5em;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .table-fill-page .tbl-wrap .mono,.table-fill-page .trend-matrix td:not(:first-child){white-space:nowrap!important;font-variant-numeric:tabular-nums;}
-.table-fill-page .shift-data-table,.table-fill-page .order-data-table{min-width:1020px;}
+/* R203：原 min-width:1020px 已删（同 2055 行注释）—— 避免阻止列宽收进可视区 */
 .table-fill-page .history-table{table-layout:auto!important;}
 .shift-page tbody tr.production-complete>td{background:#fff!important;}
 .shift-page tbody tr.production-running>td{background:#EEF0F2!important;}
@@ -13837,8 +13847,8 @@ function dtApplyWidths(table,widths){
    dt-fixed 表格的列宽与 inline width 是按「增强当时」的容器宽分配/落定的，
    之后侧栏折叠/展开、进出全屏、窗口缩放使容器变宽时表格仍是旧宽 ⇒ 右侧留白
    （实测：展开态进入 history 表 963px → 折叠侧栏容器 1039px → 表格仍 963px，留 76px）。
-   此处统一兜底：渲染宽小于容器的表格，把差值补给最宽列，保证至少铺满；
-   内容本身超宽（列宽和 > 容器）不收缩，仍走容器横向滚动。
+   此处统一兜底（R202 补不足 / R203 收超出）：容器更宽时把差值补给最宽列保证铺满；
+   容器更窄时等比收缩各列（下限=表头完整所需），尽量把全部列收进可视区、内容钳 2 行。
    已被 min-width:100% 等比拉满的表（如 order-data-table）offsetWidth≈容器宽，自动跳过。
    resize 由窗口缩放与侧栏/全屏切换的 dispatch 共同触发；延时 350ms 再跑一次，
    覆盖侧栏 width .22s 过渡的尾巴。 */
@@ -13846,13 +13856,39 @@ function dtRefitTables(){
   document.querySelectorAll('#content .tbl-wrap table.dt-fixed').forEach(function(tb){
     const wrap=tb.closest('.tbl-wrap'); if(!wrap) return;
     const cw=wrap.clientWidth; if(cw<=0) return;
-    const gap=cw-tb.offsetWidth; if(gap<=2) return;
+    const gap=cw-tb.offsetWidth;
     const cg=tb.querySelector('colgroup'); if(!cg||!cg.children.length) return;
     const ws=Array.from(cg.children).map(function(c){ return parseFloat(c.style.width)||0; });
     if(!ws.length||ws.some(function(w){ return !(w>0); })) return;
-    let mi=0; ws.forEach(function(w,i){ if(w>ws[mi]) mi=i; });
-    ws[mi]+=gap;
-    dtApplyWidths(tb,ws);
+    if(gap>2){
+      /* 容器更宽：差值补到最宽列，铺满可视区 */
+      let mi=0; ws.forEach(function(w,i){ if(w>ws[mi]) mi=i; });
+      ws[mi]+=gap;
+      dtApplyWidths(tb,ws);
+    }else if(gap<-2){
+      /* R203（用户要求「优先通过列宽调整尽量在可视范围展示全部内容，内容不超过2行」）：
+         容器变窄时不再任由表格超宽横向滚动 —— 等比收缩各列把全部列收进可视区；
+         单列下限 = max(表头完整显示所需, 64px)；压到下限仍放不下才保持横滚（内容优先）。
+         收缩后对被收缩列套 .dt-clamp2（内容最多 2 行，超出省略号）。 */
+      const ths=Array.from(tb.tHead.rows[0].cells);
+      const floors=ths.map(function(th){ return Math.max(dtThNeed(th),64); });
+      const over=-gap;
+      let avail=0; ws.forEach(function(w,i){ avail+=Math.max(0,w-floors[i]); });
+      if(avail>over){
+        const cuts=ws.map(function(w,i){ const can=Math.max(0,w-floors[i]); return over*can/avail; });
+        let rem=over-cuts.reduce(function(a,b){ return a+b; },0);
+        let mx=0; cuts.forEach(function(c,i){ if(ws[i]-floors[i]-cuts[i]>ws[mx]-floors[mx]-cuts[mx]) mx=i; });
+        cuts[mx]+=rem;
+        ws.forEach(function(w,i){ ws[i]=Math.round(w-cuts[i]); });
+        dtApplyWidths(tb,ws);
+        Array.from(tb.tHead.rows[0].cells).forEach(function(th,i){
+          if(cuts[i]>2){
+            dtClamp2(th);
+            Array.from(tb.tBodies).forEach(function(b){ Array.from(b.rows).forEach(function(r){ if(r.cells[i]) dtClamp2(r.cells[i]); }); });
+          }
+        });
+      }
+    }
   });
 }
 window.addEventListener('resize',function(){ dtRefitTables(); setTimeout(dtRefitTables,350); });
